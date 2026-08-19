@@ -8,6 +8,7 @@ import 'package:flame/sprite.dart';
 import '../../audio/sounds.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
+import 'chainsaw_monster.dart';
 import 'coin.dart';
 import 'enemy.dart';
 import 'flying_monster.dart';
@@ -44,18 +45,25 @@ class Player extends PositionComponent
   Sprite? destello;
   SpriteAnimation? run;
   SpriteAnimationTicker? _runTicker;
+  final jumpSprites = <Sprite>[];
+  final fallSprites = <Sprite>[];
+  final attackSprites = <Sprite>[];
   final hypnotizedSprites = <Sprite>[];
+  final sprayFrames = <Sprite>[];
   bool hypnotized = false;
+  bool fallingOut = false;
   double _hypnoT = 0;
   double _hypnoLandedAt = -1;
+  double _fallT = 0;
   double attackFlash = 0;
   double _laserT = 0;
+  double _animT = 0;
 
   bool get isAttacking => attackFlash > 0 && !hypnotized;
 
   void flashAttack() {
     if (hypnotized) return;
-    attackFlash = 0.22;
+    attackFlash = game.level.number == 3 ? 0.45 : 0.22;
     facingRight = true;
   }
 
@@ -81,25 +89,64 @@ class Player extends PositionComponent
     fall ??= idle;
     attack ??= idle;
     destello ??= await game.trySprite('items/destellomedialuna.png');
-    if (run != null) {
-      final src = run!.frames.first.sprite.srcSize;
-      size = Vector2(52, (52 * src.y / src.x).roundToDouble());
+    if (game.level.number == 3 && sprayFrames.isEmpty) {
+      for (var i = 1; i <= 3; i++) {
+        final frame =
+            await game.trySprite('items/aerosol_$i.png') ??
+            await game.trySprite('levels/3/aerosol_$i.png');
+        if (frame != null) sprayFrames.add(frame);
+      }
+    }
+    final body = idle ??
+        (run != null ? run!.frames.first.sprite : null) ??
+        jump ??
+        fall;
+    if (body != null) {
+      final src = body.srcSize;
+      const w = 52.0;
+      size = Vector2(w, (w * src.y / src.x).roundToDouble());
     }
   }
 
   Future<void> _loadFromFolder(String folder) async {
     idle =
-        await game.trySprite('$folder/run_1.png') ??
-        await game.trySprite('$folder/idle.png');
+        await game.trySprite('$folder/idle.png') ??
+        await game.trySprite('$folder/run_1.png');
     jump = await game.trySprite('$folder/jump.png');
     fall = await game.trySprite('$folder/fall.png');
     hurt = await game.trySprite('$folder/hurt.png');
     attack = await game.trySprite('$folder/attack.png');
     run = await game.tryStripAnimation('$folder/run.png');
+    if (run == null) {
+      final runFrames = <Sprite>[];
+      for (var i = 1; i <= 4; i++) {
+        final frame = await game.trySprite('$folder/run_$i.png');
+        if (frame != null) runFrames.add(frame);
+      }
+      if (runFrames.length >= 2) {
+        run = SpriteAnimation.spriteList(runFrames, stepTime: 0.11);
+      }
+    }
     _runTicker = run?.createTicker();
+    jumpSprites.clear();
+    fallSprites.clear();
+    attackSprites.clear();
+    for (var i = 1; i <= 3; i++) {
+      final frame = await game.trySprite('$folder/jump_$i.png');
+      if (frame != null) jumpSprites.add(frame);
+    }
+    if (jump != null && jumpSprites.isEmpty) jumpSprites.add(jump!);
+    for (final name in ['fall.png', 'fall_2.png']) {
+      final frame = await game.trySprite('$folder/$name');
+      if (frame != null) fallSprites.add(frame);
+    }
+    for (final name in ['attack_1.png', 'attack.png', 'attack_3.png']) {
+      final frame = await game.trySprite('$folder/$name');
+      if (frame != null) attackSprites.add(frame);
+    }
     hypnotizedSprites.clear();
     for (var i = 1; i <= 3; i++) {
-      final frame = await game.trySprite('$folder/hypnotized_$i.png');
+      final frame = await game.loadSpriteOrNull('$folder/hypnotized_$i.png');
       if (frame != null) hypnotizedSprites.add(frame);
     }
   }
@@ -109,7 +156,20 @@ class Player extends PositionComponent
     _hypnoT = 0;
     _hypnoLandedAt = -1;
     velocity.x = 0;
+    velocity.y = -240;
+    onGround = false;
     attackFlash = 0;
+    invulnerableTime = 0;
+  }
+
+  void startFallingOut() {
+    fallingOut = true;
+    _fallT = 0;
+    attackFlash = 0;
+    invulnerableTime = 0;
+    velocity.x *= 0.25;
+    if (velocity.y < 120) velocity.y = 160;
+    onGround = false;
   }
 
   @override
@@ -119,7 +179,13 @@ class Player extends PositionComponent
       _updateHypnotized(dt);
       return;
     }
+    if (fallingOut) {
+      _updateFallingOut(dt);
+      return;
+    }
     if (!game.started || game.finished) return;
+
+    _animT += dt;
 
     if (attackFlash > 0) {
       attackFlash -= dt;
@@ -131,10 +197,15 @@ class Player extends PositionComponent
       invulnerableTime -= dt;
     }
 
+    final axis = game.input.axisX;
     if (game.manualMove) {
-      velocity.x = game.input.axisX * moveSpeed;
+      velocity.x = axis * moveSpeed;
       if (isAttacking || velocity.x > 0) facingRight = true;
       if (!isAttacking && velocity.x < 0) facingRight = false;
+    } else if (axis.abs() > 0) {
+      velocity.x = axis * moveSpeed;
+      if (velocity.x > 0) facingRight = true;
+      if (velocity.x < 0) facingRight = false;
     } else {
       velocity.x = moveSpeed;
       facingRight = true;
@@ -157,8 +228,25 @@ class Player extends PositionComponent
     _moveAxis(dt, horizontal: true);
     _moveAxis(dt, horizontal: false);
 
-    if (position.y > game.spawnPoint.y + 70) {
+    if (game.level.number == 3) {
+      if (position.y > game.mapSize.y - 6) {
+        game.fallOffMap();
+      }
+    } else if (position.y > game.spawnPoint.y + 70) {
       game.hurtPlayer();
+    }
+  }
+
+  void _updateFallingOut(double dt) {
+    _fallT += dt;
+    _animT += dt;
+    velocity.x *= 0.98;
+    velocity.y += gravity * dt;
+    if (velocity.y > 980) velocity.y = 980;
+    position.x += velocity.x * dt;
+    position.y += velocity.y * dt;
+    if (_fallT >= 1.15 || position.y > game.mapSize.y + 40) {
+      game.onFallFinished();
     }
   }
 
@@ -169,9 +257,9 @@ class Player extends PositionComponent
     if (velocity.y > 900) velocity.y = 900;
     _moveAxis(dt, horizontal: false);
 
-    if (onGround && _hypnoT >= 0.85) {
+    if (onGround && _hypnoT >= 0.55) {
       if (_hypnoLandedAt < 0) _hypnoLandedAt = _hypnoT;
-      if (_hypnoT - _hypnoLandedAt >= 1.15) {
+      if (_hypnoT - _hypnoLandedAt >= 1.35) {
         game.onHypnotizedFinished();
       }
     } else if (position.y > game.spawnPoint.y + 80) {
@@ -196,6 +284,13 @@ class Player extends PositionComponent
       if (!playerRect.overlaps(rect)) continue;
 
       if (!block.platform && inHole) continue;
+
+      if (block.platform) {
+        if (horizontal) continue;
+        if (velocity.y <= 0) continue;
+        final prevY = position.y - velocity.y * dt;
+        if (prevY > rect.top + 10) continue;
+      }
 
       if (horizontal) {
         if (velocity.x > 0) {
@@ -239,6 +334,7 @@ class Player extends PositionComponent
         game.hurtPlayer();
       }
     } else if (other is Goal) {
+      if (game.level.number == 3 && game.monsterEnergy > 0) return;
       game.reachGoal();
     } else if (other is SectorDoor) {
       game.enterDoor(other);
@@ -249,7 +345,10 @@ class Player extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    if (invulnerableTime > 0 && (invulnerableTime * 12).floor().isEven) {
+    if (!hypnotized &&
+        !fallingOut &&
+        invulnerableTime > 0 &&
+        (invulnerableTime * 12).floor().isEven) {
       return;
     }
 
@@ -274,7 +373,7 @@ class Player extends PositionComponent
       var destY = size.y - destH;
       Offset? laserFrom;
       Offset? laserTo;
-      if (isAttacking && attack != null) {
+      if (isAttacking && attack != null && game.level.number == 2) {
         destH = size.y;
         destW = destH * src.x / src.y;
         destY = size.y - destH;
@@ -291,6 +390,27 @@ class Player extends PositionComponent
           );
           break;
         }
+      } else if (isAttacking && game.level.number == 3) {
+        destH = size.y;
+        destW = destH * src.x / src.y;
+        destY = size.y - destH;
+        const muzzleX = 301.0;
+        const muzzleY = 97.0;
+        final scale = destH / src.y;
+        laserFrom = Offset(destX + muzzleX * scale, destY + muzzleY * scale);
+        for (final monster in game.world.children.whereType<ChainsawMonster>()) {
+          if (!monster.appeared || monster.dying) continue;
+          laserTo = Offset(
+            monster.position.x - position.x,
+            monster.position.y - (position.y - size.y),
+          );
+          break;
+        }
+      } else if (fallingOut) {
+        destH = size.y;
+        destW = destH * src.x / src.y;
+        destX = (size.x - destW) * 0.15;
+        destY = size.y - destH;
       } else if (hypnotized) {
         final refH = hypnotizedSprites.isNotEmpty
             ? hypnotizedSprites.first.srcSize.y
@@ -310,7 +430,11 @@ class Player extends PositionComponent
           ..isAntiAlias = false,
       );
       if (laserFrom != null && laserTo != null) {
-        _drawLaser(canvas, laserFrom, laserTo);
+        if (game.level.number == 3) {
+          _drawAerosolStain(canvas, laserFrom, laserTo);
+        } else {
+          _drawLaser(canvas, laserFrom, laserTo);
+        }
       }
       canvas.restore();
       return;
@@ -323,6 +447,99 @@ class Player extends PositionComponent
       ),
       Paint()..color = const Color(0xFF4CC9F0),
     );
+  }
+
+  void _drawAerosolStain(Canvas canvas, Offset from, Offset to) {
+    final dx = to.dx - from.dx;
+    final dy = to.dy - from.dy;
+    final len = sqrt(dx * dx + dy * dy);
+    if (len < 2) return;
+    final ux = dx / len;
+    final uy = dy / len;
+    final px = -uy;
+    final py = ux;
+    final flow = _laserT;
+    final paint = Paint()
+      ..isAntiAlias = false
+      ..style = PaintingStyle.fill;
+
+    // Cono de niebla: ancho cerca del spray, se abre hacia el monstruo.
+    for (var i = 1; i <= 14; i++) {
+      final f = i / 14;
+      final cx = from.dx + dx * f;
+      final cy = from.dy + dy * f;
+      final w = 5.0 + f * 36;
+      final h = 3.5 + f * 22;
+      final a = (0.28 * (1 - f * 0.55)).clamp(0.06, 0.28);
+      paint.color = Color.fromRGBO(255, 170, 230, a);
+      canvas.save();
+      canvas.translate(cx, cy);
+      canvas.rotate(atan2(uy, ux));
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset.zero, width: w, height: h),
+        paint,
+      );
+      canvas.restore();
+    }
+
+    if (sprayFrames.isNotEmpty) {
+      final frame = sprayFrames[(flow / 0.09).floor() % sprayFrames.length];
+      for (var k = 0; k < 5; k++) {
+        final f = 0.12 + k * 0.18;
+        final wobble = sin(flow * 18 + k * 1.7) * (6 + k * 3);
+        final cx = from.dx + dx * f + px * wobble;
+        final cy = from.dy + dy * f + py * wobble;
+        final cloud = 22.0 + k * 16;
+        canvas.save();
+        canvas.translate(cx, cy);
+        canvas.rotate(atan2(uy, ux));
+        frame.render(
+          canvas,
+          position: Vector2(-cloud * 0.15, -cloud * 0.45),
+          size: Vector2(cloud * 1.35, cloud),
+          overridePaint: Paint()
+            ..filterQuality = FilterQuality.none
+            ..isAntiAlias = false
+            ..color = Color.fromRGBO(255, 255, 255, 0.55 + k * 0.08),
+        );
+        canvas.restore();
+      }
+    }
+
+    // Gotas de spray (pixeles), más dispersas cuanto más lejos.
+    for (var i = 0; i < 56; i++) {
+      final along = 0.05 + 0.95 * ((sin(i * 2.3 + flow * 16) + 1) * 0.5);
+      final frac = (sin(i * 12.9898 + 78.233) * 43758.5453).abs() % 1.0;
+      final spread = along * (10 + 22 * along);
+      final side = ((i.isEven ? 1.0 : -1.0) * spread * (0.25 + frac));
+      final x = from.dx + ux * along * len + px * side;
+      final y = from.dy + uy * along * len + py * side;
+      final s = 1.2 + along * 4.2 + frac * 1.4;
+      final alpha = (0.9 - along * 0.5).clamp(0.18, 0.9);
+      final palette = <Color>[
+        Color.fromRGBO(255, 255, 255, alpha),
+        Color.fromRGBO(255, 210, 240, alpha),
+        Color.fromRGBO(255, 90, 214, alpha * 0.85),
+        Color.fromRGBO(255, 180, 236, alpha),
+      ];
+      paint.color = palette[i % palette.length];
+      canvas.drawRect(
+        Rect.fromCenter(center: Offset(x, y), width: s, height: s),
+        paint,
+      );
+    }
+
+    // Mancha al llegar al monstruo.
+    canvas.save();
+    canvas.translate(to.dx, to.dy);
+    final pulse = 0.85 + 0.15 * sin(flow * 20);
+    paint.color = Color.fromRGBO(255, 90, 214, 0.4 * pulse);
+    canvas.drawCircle(Offset.zero, 16 * pulse, paint);
+    paint.color = Color.fromRGBO(255, 180, 236, 0.55 * pulse);
+    canvas.drawCircle(const Offset(3, -2), 10 * pulse, paint);
+    paint.color = Color.fromRGBO(255, 255, 255, 0.7 * pulse);
+    canvas.drawCircle(const Offset(-2, 1), 5 * pulse, paint);
+    canvas.restore();
   }
 
   void _drawLaser(Canvas canvas, Offset from, Offset to) {
@@ -385,24 +602,46 @@ class Player extends PositionComponent
   }
 
   Sprite? _currentSprite() {
+    if (fallingOut && fallSprites.isNotEmpty) {
+      final i = min(fallSprites.length - 1, (_fallT / 0.28).floor());
+      return fallSprites[i];
+    }
     if (hypnotized && hypnotizedSprites.isNotEmpty) {
       if (_hypnoDown) return hypnotizedSprites.last;
-      if (_hypnoT < 0.4 && onGround) return hypnotizedSprites[0];
+      if (_hypnoT < 0.28 && velocity.y < 0) return hypnotizedSprites[0];
       return hypnotizedSprites.length > 1
           ? hypnotizedSprites[1]
           : hypnotizedSprites[0];
     }
     if (!game.started) return idle;
-    if (isAttacking) return attack ?? idle;
+    if (isAttacking) {
+      if (attackSprites.isNotEmpty) {
+        final i = (_laserT / 0.1).floor() % attackSprites.length;
+        return attackSprites[i];
+      }
+      return attack ?? idle;
+    }
     if (invulnerableTime > 0.8) return hurt ?? idle;
     if (!onGround) {
       if (velocity.y < 0 || _hasGroundBelow()) {
+        if (jumpSprites.isNotEmpty) {
+          final i = (_animT / 0.12).floor() % jumpSprites.length;
+          return jumpSprites[i];
+        }
         return jump ?? idle;
+      }
+      if (fallSprites.isNotEmpty) {
+        final i = min(fallSprites.length - 1, 1);
+        return fallSprites[i];
       }
       return fall ?? jump ?? idle;
     }
-    if (velocity.x.abs() > 10 && _runTicker != null) {
-      return _runTicker!.getSprite();
+    if (velocity.x.abs() > 10) {
+      if (_runTicker != null) return _runTicker!.getSprite();
+      if (jumpSprites.isNotEmpty) {
+        final i = (_animT / 0.14).floor() % jumpSprites.length;
+        return jumpSprites[i];
+      }
     }
     return idle;
   }

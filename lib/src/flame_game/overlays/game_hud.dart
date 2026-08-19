@@ -15,11 +15,12 @@ class GameHud extends StatelessWidget {
   final VoidCallback onSettings;
   final VoidCallback onPause;
 
-  static const _iconH = 40.0;
-  static const _energyH = 60.0;
-
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).height < 520;
+    final energyH = compact ? 32.0 : 44.0;
+    final iconH = compact ? 32.0 : 40.0;
+
     return SafeArea(
       child: ValueListenableBuilder<int>(
         valueListenable: game.hud,
@@ -29,10 +30,10 @@ class GameHud extends StatelessWidget {
             children: [
               const SizedBox.expand(),
               Positioned(
-                top: 8,
+                top: compact ? 4 : 8,
                 left: 0,
                 right: 0,
-                height: _energyH,
+                height: energyH,
                 child: Stack(
                   clipBehavior: Clip.none,
                   alignment: Alignment.center,
@@ -42,16 +43,16 @@ class GameHud extends StatelessWidget {
                       top: 0,
                       bottom: 0,
                       child: IgnorePointer(
-                        child: EnergyBar.player(game: game, height: _energyH),
+                        child: EnergyBar.player(game: game, height: energyH),
                       ),
                     ),
-                    if (game.level.number == 2)
+                    if (game.level.number == 2 || game.level.number == 3)
                       Positioned(
                         right: 8,
                         top: 0,
                         bottom: 0,
                         child: IgnorePointer(
-                          child: EnergyBar.monster(game: game, height: _energyH),
+                          child: EnergyBar.monster(game: game, height: energyH),
                         ),
                       ),
                     Row(
@@ -61,19 +62,19 @@ class GameHud extends StatelessWidget {
                         _HudImageButton(
                           asset: 'assets/images/hud/hud_settings.png',
                           srcSize: const Size(90, 96),
-                          height: _iconH,
+                          height: iconH,
                           onPressed: onSettings,
                         ),
                         const SizedBox(width: 8),
                         _LevelPlaque(
                           level: game.level.number,
-                          height: _iconH,
+                          height: iconH,
                         ),
                         const SizedBox(width: 8),
                         _HudImageButton(
                           asset: 'assets/images/hud/hud_pause.png',
                           srcSize: const Size(112, 100),
-                          height: _iconH,
+                          height: iconH,
                           onPressed: onPause,
                         ),
                       ],
@@ -84,7 +85,7 @@ class GameHud extends StatelessWidget {
               if (game.hint.isNotEmpty)
                 Positioned(
                   right: 16,
-                  top: 8 + _energyH + 6,
+                  top: (compact ? 4 : 8) + energyH + 6,
                   left: 16,
                   child: Text(
                     game.hint,
@@ -111,37 +112,24 @@ class _LevelPlaque extends StatelessWidget {
   final int level;
   final double height;
 
+  static const _art = {
+    1: 'assets/images/hud/hud_nivel.png',
+    2: 'assets/images/hud/hud_nivel_2.png',
+    3: 'assets/images/hud/hud_nivel_3.png',
+  };
+
   @override
   Widget build(BuildContext context) {
+    final asset = _art[level];
+    if (asset == null) return const SizedBox.shrink();
     final width = height * 198 / 109;
-    if (level == 1) {
-      return Image.asset(
-        'assets/images/hud/hud_nivel.png',
-        width: width,
-        height: height,
-        filterQuality: FilterQuality.none,
-        fit: BoxFit.fill,
-        gaplessPlayback: true,
-      );
-    }
-    return Container(
+    return Image.asset(
+      asset,
       width: width,
       height: height,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFF020A46),
-        border: Border.all(color: const Color(0xFF7CFF00), width: 3),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        'NIVEL $level',
-        style: const TextStyle(
-          color: Colors.white,
-          fontFamily: 'Permanent Marker',
-          fontSize: 16,
-          height: 1,
-        ),
-      ),
+      filterQuality: FilterQuality.none,
+      fit: BoxFit.fill,
+      gaplessPlayback: true,
     );
   }
 }

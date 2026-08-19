@@ -50,6 +50,8 @@ flutter:
     - assets/images/items/
     - assets/images/ui/
     - assets/images/hud/
+    - assets/images/hud/controls/
+    - assets/images/hud/victory/
     - assets/music/
     - assets/sfx/
 

@@ -19,7 +19,16 @@ class Goal extends PositionComponent
 
   @override
   Future<void> onLoad() async {
-    sprite = await game.trySprite('items/goal.png');
+    if (game.level.number == 3) {
+      sprite = await game.trySprite('levels/3/libra_corp.png') ??
+          await game.trySprite('items/libra_corp.png');
+      if (sprite != null) {
+        final src = sprite!.srcSize;
+        size = Vector2(78, 78 * src.y / src.x);
+      }
+    } else {
+      sprite = await game.trySprite('items/goal.png');
+    }
     await add(RectangleHitbox(collisionType: CollisionType.passive));
   }
 

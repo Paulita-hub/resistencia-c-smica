@@ -37,6 +37,14 @@ class EnergyBar extends StatelessWidget {
         headSrcSize: const Size(127, 154),
       );
     }
+    if (game.level.number == 3) {
+      return EnergyBar(
+        filled: game.energy,
+        height: height,
+        headAsset: 'assets/images/hud/cabeza_alien.png',
+        headSrcSize: const Size(101, 165),
+      );
+    }
     return EnergyBar(
       filled: game.energy,
       height: height,

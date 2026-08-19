@@ -9,6 +9,8 @@ import 'package:flutter/widgets.dart';
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
 import '../level_selection/levels.dart';
+import 'components/aerosol_burst.dart';
+import 'components/chainsaw_monster.dart';
 import 'components/circuit_background.dart';
 import 'components/coin.dart';
 import 'components/computer_prop.dart';
@@ -19,6 +21,7 @@ import 'components/ground_strip.dart';
 import 'components/hole_pit.dart';
 import 'components/instruction_bubble.dart';
 import 'components/level_background.dart';
+import 'components/mobile_hud.dart';
 import 'components/player.dart';
 import 'components/sector_door.dart';
 import 'components/solid_block.dart';
@@ -27,7 +30,7 @@ import 'level_maps.dart';
 import 'player_input.dart';
 
 class ResistenciaGame extends FlameGame
-    with HasCollisionDetection, KeyboardEvents, TapCallbacks {
+    with HasCollisionDetection, KeyboardEvents {
   ResistenciaGame({
     required this.level,
     required this.audio,
@@ -48,13 +51,11 @@ class ResistenciaGame extends FlameGame
   static const energySlots = 5;
   static const startingEnergy = 3;
   static const clicksPerHit = 12;
-  static const clicksToResist = 8;
   int energy = startingEnergy;
   int monsterEnergy = energySlots;
   int lives = 3;
   bool inBattle = false;
   int attackCharge = 0;
-  int pulseClicks = 0;
   bool started = false;
   bool finished = false;
   bool gameOver = false;
@@ -63,14 +64,20 @@ class ResistenciaGame extends FlameGame
   final hud = ValueNotifier<int>(0);
   double _cameraX = 0;
 
-  /// Nivel 2: el jugador elige avanzar o retroceder. El 1 sigue en auto-run.
-  bool get manualMove => level.number == 2;
+  /// Nivel 2 y 3: el jugador elige avanzar o retroceder. El 1 sigue en auto-run.
+  bool get manualMove => level.number == 2 || level.number == 3;
+  bool get canAttack => level.number == 2 || level.number == 3;
+
+  /// Tercer botón HUD (Usar objeto). No hay ítem usable todavía.
+  bool get canUseItem => false;
+
+  MobileHud? mobileHud;
 
   static const hudOverlay = 'hud';
-  static const controlsOverlay = 'controls';
   static const gameOverOverlay = 'gameOver';
   static const playOverlay = 'play';
   static const pauseOverlay = 'pause';
+  static const winOverlay = 'win';
 
   @override
   Future<void> onLoad() async {
@@ -114,6 +121,7 @@ class ResistenciaGame extends FlameGame
 
   void _failIfLeftBehind() {
     if (!started || finished || gameOver || manualMove) return;
+    if (level.number == 3 && (!player.onGround || player.fallingOut)) return;
     if (player.x + player.size.x < camera.viewfinder.position.x - 4) {
       failLevel();
     }
@@ -125,11 +133,22 @@ class ResistenciaGame extends FlameGame
     if (isLoaded) {
       _scrollCameraX(dt);
       _failIfLeftBehind();
+      if (level.number == 2 &&
+          started &&
+          !gameOver &&
+          !_won &&
+          energy <= 0 &&
+          !player.hypnotized) {
+        hypnotizePlayer();
+      }
     }
   }
 
   bool get monsterReady {
     for (final child in world.children.whereType<FlyingMonster>()) {
+      return child.appeared;
+    }
+    for (final child in world.children.whereType<ChainsawMonster>()) {
       return child.appeared;
     }
     return false;
@@ -150,11 +169,10 @@ class ResistenciaGame extends FlameGame
   void _loadLevel() {
     world.removeAll(world.children.toList());
     coins = 0;
-    energy = level.number == 2 ? energySlots : startingEnergy;
+    energy = level.number >= 2 ? energySlots : startingEnergy;
     monsterEnergy = energySlots;
     inBattle = false;
     attackCharge = 0;
-    pulseClicks = 0;
     finished = false;
     gameOver = false;
     _won = false;
@@ -168,12 +186,14 @@ class ResistenciaGame extends FlameGame
     final floorTop = LevelMaps.floorTopY(rows);
     spawnPoint = Vector2(tile, floorTop);
 
-    world.add(
-      GroundLayer(
-        position: Vector2(0, floorTop),
-        size: Vector2(mapSize.x, floorHeight),
-      ),
-    );
+    if (LevelMaps.hasFloor(rows)) {
+      world.add(
+        GroundLayer(
+          position: Vector2(0, floorTop),
+          size: Vector2(mapSize.x, floorHeight),
+        ),
+      );
+    }
 
     for (var y = 0; y < rows.length; y++) {
       for (var x = 0; x < rows[y].length; x++) {
@@ -265,6 +285,8 @@ class ResistenciaGame extends FlameGame
     world.add(player);
     if (level.number == 2) {
       world.add(FlyingMonster());
+    } else if (level.number == 3) {
+      world.add(ChainsawMonster());
     }
     world.add(InstructionBubble());
   }
@@ -273,7 +295,7 @@ class ResistenciaGame extends FlameGame
     coins += 1;
     if (energy < energySlots) energy += 1;
     audio.playSfx(SfxType.coin);
-    hint = level.number == 2
+    hint = level.number >= 2
         ? 'La medialuna recarga tu energía'
         : 'Ahora buscá la puerta correcta';
     hud.value++;
@@ -282,15 +304,24 @@ class ResistenciaGame extends FlameGame
   void beginBattle() {
     if (finished || gameOver || !started) return;
     inBattle = true;
-    pulseClicks = 0;
+  }
+
+  void useItem() {
+    if (!canUseItem) return;
+    tapAttack();
   }
 
   void tapAttack() {
-    if (!started || finished || gameOver || !manualMove) return;
+    if (!started || finished || gameOver || !canAttack) return;
     player.flashAttack();
-    if (!monsterReady) return;
+    if (level.number == 3) {
+      _spawnAerosol();
+    }
+    if (!monsterReady) {
+      audio.playSfx(SfxType.buttonTap);
+      return;
+    }
     attackCharge++;
-    if (inBattle) pulseClicks++;
     audio.playSfx(SfxType.buttonTap);
     if (attackCharge >= clicksPerHit) {
       attackCharge = 0;
@@ -298,38 +329,112 @@ class ResistenciaGame extends FlameGame
       hud.value++;
       audio.playSfx(SfxType.stomp);
       if (monsterEnergy <= 0) {
-        reachGoal();
+        if (level.number == 3) {
+          _onChainsawMonsterDefeated();
+        } else {
+          reachGoal();
+        }
       }
     }
+  }
+
+  void _onChainsawMonsterDefeated() {
+    for (final monster in world.children.whereType<ChainsawMonster>()) {
+      monster.defeat();
+    }
+    _spawnLibraCorpExit();
+    hint = '¡Lo venciste! Tocá la máquina Libra Corp';
+    hud.value++;
+  }
+
+  void _spawnLibraCorpExit() {
+    if (world.children.whereType<Goal>().isNotEmpty) return;
+    final tile = LevelMaps.tileSize;
+    final y = tile * 6;
+    final startX = mapSize.x - tile * 8;
+    for (var i = 0; i < 4; i++) {
+      world.add(
+        SolidBlock(
+          position: Vector2(startX + i * tile, y),
+          size: Vector2.all(tile),
+          platform: true,
+        ),
+      );
+    }
+    world.add(Goal(position: Vector2(startX + tile * 2, y)));
   }
 
   void resolveBattle() {
     if (!inBattle || finished || gameOver) return;
     inBattle = false;
-    if (pulseClicks >= clicksToResist) {
-      return;
-    }
     energy = (energy - 1).clamp(0, energySlots);
     hud.value++;
     audio.playSfx(SfxType.hurt);
-    player.invulnerableTime = 0.55;
     if (energy <= 0) {
       hypnotizePlayer();
+      return;
+    }
+    player.invulnerableTime = 0.55;
+  }
+
+  void _spawnAerosol() {
+    final origin = Vector2(
+      player.position.x + player.size.x * 0.72,
+      player.position.y - player.size.y * 0.52,
+    );
+    final target = _monsterAimPoint();
+    final dir = (target - origin);
+    if (dir.length2 < 1) {
+      dir.setValues(1, -0.2);
+    }
+    dir.normalize();
+    for (final angle in [-0.2, 0.0, 0.2]) {
+      final spray = dir.clone()..rotate(angle);
+      world.add(AerosolBurst(position: origin.clone(), dir: spray));
     }
   }
 
-  void resolveHypnosisPulse() {
-    resolveBattle();
+  Vector2 _monsterAimPoint() {
+    for (final monster in world.children.whereType<ChainsawMonster>()) {
+      return monster.position.clone();
+    }
+    final zoom = camera.viewfinder.zoom;
+    final viewW = zoom > 0 ? size.x / zoom : 400.0;
+    final camX = camera.viewfinder.position.x;
+    return Vector2(camX + viewW * 0.72, mapSize.y * 0.38);
+  }
+
+  void laserHitPlayer() {
+    if (finished || gameOver || player.fallingOut || player.hypnotized) return;
+    if (player.invulnerableTime > 0) return;
+    energy = (energy - 1).clamp(0, energySlots);
+    hud.value++;
+    audio.playSfx(SfxType.hurt);
+    if (energy <= 0) {
+      fallOffMap();
+      return;
+    }
+    player.invulnerableTime = 0.8;
+  }
+
+  void fallOffMap() {
+    if (gameOver || _won || player.fallingOut) return;
+    finished = true;
+    player.startFallingOut();
+    audio.playSfx(SfxType.hurt);
+  }
+
+  void onFallFinished() {
+    failLevel(message: 'Caíste');
   }
 
   void hypnotizePlayer() {
-    if (finished || gameOver) return;
+    if (gameOver || _won || player.hypnotized) return;
     finished = true;
     inBattle = false;
-    player.velocity.setZero();
-    player.startHypnotized();
-    hint = 'Te hipnotizaron';
+    energy = 0;
     hud.value++;
+    player.startHypnotized();
     audio.playSfx(SfxType.hurt);
   }
 
@@ -365,20 +470,30 @@ class ResistenciaGame extends FlameGame
     gameOver = true;
     finished = true;
     hint = message ??
-        (level.number == 2 ? 'Te hipnotizaron' : 'Te trabaste con una plataforma');
+        (level.number == 2
+            ? 'Te hipnotizaron'
+            : level.number == 3
+            ? 'Caíste'
+            : 'Te trabaste con una plataforma');
     hud.value++;
     if (!alreadyFinished) audio.playSfx(SfxType.hurt);
+    _hideMobileHud();
     pauseEngine();
     overlays.add(gameOverOverlay);
   }
 
   void hurtPlayer() {
+    if (level.number == 3) {
+      laserHitPlayer();
+      return;
+    }
     if (finished || player.invulnerableTime > 0) return;
     lives -= 1;
     hud.value++;
     audio.playSfx(SfxType.hurt);
     if (lives <= 0) {
       gameOver = true;
+      _hideMobileHud();
       pauseEngine();
       overlays.add(gameOverOverlay);
       return;
@@ -393,6 +508,9 @@ class ResistenciaGame extends FlameGame
     _won = true;
     finished = true;
     audio.playSfx(SfxType.congrats);
+    _hideMobileHud();
+    pauseEngine();
+    overlays.add(winOverlay);
     onWon(coins);
   }
 
@@ -414,8 +532,19 @@ class ResistenciaGame extends FlameGame
       (bubble) => bubble.removeFromParent(),
     );
     overlays.remove(playOverlay);
-    overlays.add(controlsOverlay);
+    _showMobileHud();
     hud.value++;
+  }
+
+  void _showMobileHud() {
+    mobileHud?.removeFromParent();
+    mobileHud = MobileHud();
+    camera.viewport.add(mobileHud!);
+  }
+
+  void _hideMobileHud() {
+    mobileHud?.removeFromParent();
+    mobileHud = null;
   }
 
   void restartLevel() {
@@ -424,32 +553,13 @@ class ResistenciaGame extends FlameGame
     input.clear();
     overlays.remove(gameOverOverlay);
     overlays.remove(pauseOverlay);
-    overlays.remove(controlsOverlay);
+    overlays.remove(winOverlay);
+    _hideMobileHud();
     resumeEngine();
     _loadLevel();
     _setupCamera();
     overlays.add(playOverlay);
     hud.value++;
-  }
-
-  @override
-  void onTapDown(TapDownEvent event) {
-    if (!started || finished || gameOver) return;
-    if (manualMove) {
-      tapAttack();
-    } else {
-      input.jumpHeld = true;
-    }
-  }
-
-  @override
-  void onTapUp(TapUpEvent event) {
-    input.jumpHeld = false;
-  }
-
-  @override
-  void onTapCancel(TapCancelEvent event) {
-    input.jumpHeld = false;
   }
 
   @override
@@ -468,11 +578,11 @@ class ResistenciaGame extends FlameGame
       input.left = false;
       input.right = false;
     }
-    input.jumpHeld =
+    input.keyJump =
         keysPressed.contains(LogicalKeyboardKey.space) ||
         keysPressed.contains(LogicalKeyboardKey.arrowUp) ||
         keysPressed.contains(LogicalKeyboardKey.keyW);
-    if (manualMove && event is KeyDownEvent) {
+    if (canAttack && event is KeyDownEvent) {
       final attackKey =
           event.logicalKey == LogicalKeyboardKey.keyJ ||
           event.logicalKey == LogicalKeyboardKey.keyF ||

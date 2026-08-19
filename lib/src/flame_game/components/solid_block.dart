@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
+import '../level_maps.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
 
@@ -36,7 +37,8 @@ class SolidBlock extends PositionComponent
     );
     if (loaded == null) return;
     final src = loaded.srcSize;
-    size = Vector2(size.x, src.y * (size.x / src.x));
+    final tile = LevelMaps.tileSize;
+    size = Vector2(size.x, src.y * (tile / src.x));
     sprite = loaded;
   }
 

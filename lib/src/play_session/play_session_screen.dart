@@ -12,7 +12,7 @@ import '../flame_game/overlays/game_hud.dart';
 import '../flame_game/overlays/game_over_overlay.dart';
 import '../flame_game/overlays/pause_overlay.dart';
 import '../flame_game/overlays/start_play_overlay.dart';
-import '../flame_game/overlays/touch_controls.dart';
+import '../flame_game/overlays/victory_overlay.dart';
 import '../flame_game/resistencia_game.dart';
 import '../games_services/games_services.dart';
 import '../games_services/score.dart';
@@ -75,12 +75,10 @@ class _PlaySessionScreenState extends State<PlaySessionScreen> {
             },
             onPause: game.pauseGame,
           ),
-          ResistenciaGame.controlsOverlay: (context, game) {
-            return TouchControls(game: game);
-          },
           ResistenciaGame.gameOverOverlay: (context, game) {
             return GameOverOverlay(
               game: game,
+              onRetry: game.restartLevel,
               onExit: () => GoRouter.of(context).go('/play'),
             );
           },
@@ -92,6 +90,22 @@ class _PlaySessionScreenState extends State<PlaySessionScreen> {
           },
           ResistenciaGame.playOverlay: (context, game) {
             return StartPlayOverlay(game: game);
+          },
+          ResistenciaGame.winOverlay: (context, game) {
+            return VictoryOverlay(
+              game: game,
+              onRetry: game.restartLevel,
+              onExit: () => GoRouter.of(context).go('/play'),
+              onNext: () {
+                final next = game.level.number + 1;
+                final exists = gameLevels.any((level) => level.number == next);
+                if (exists) {
+                  GoRouter.of(context).go('/play/session/$next');
+                } else {
+                  GoRouter.of(context).go('/play');
+                }
+              },
+            );
           },
         },
       ),
@@ -121,6 +135,5 @@ class _PlaySessionScreenState extends State<PlaySessionScreen> {
     }
 
     if (!mounted) return;
-    GoRouter.of(context).go('/play/won', extra: {'score': score});
   }
 }

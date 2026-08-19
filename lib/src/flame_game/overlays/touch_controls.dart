@@ -31,10 +31,10 @@ class TouchControls extends StatelessWidget {
             const Spacer(),
             _HoldButton(
               label: 'Saltar',
-              width: game.manualMove ? 110 : 140,
-              onHeld: (held) => game.input.jumpHeld = held,
+              width: game.canAttack ? 110 : 140,
+              onHeld: (held) => game.input.hudJump = held,
             ),
-            if (game.manualMove) ...[
+            if (game.canAttack) ...[
               const SizedBox(width: 10),
               _HoldButton(
                 label: 'Atacar',

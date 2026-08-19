@@ -15,6 +15,14 @@ extension SpriteLoading on FlameGame {
     }
   }
 
+  Future<Sprite?> loadSpriteOrNull(String path) async {
+    try {
+      return Sprite(await images.load(path));
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<SpriteAnimation?> tryStripAnimation(
     String path, {
     double stepTime = 0.12,

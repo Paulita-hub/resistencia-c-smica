@@ -11,6 +11,10 @@ class LevelMaps {
   /// El piso (ground / broken) ocupa este porcentaje de la altura de pantalla.
   static const floorScreenFraction = 0.25;
 
+  static bool hasFloor(List<String> rows) {
+    return rows.any((row) => row.contains('X') || row.contains('H'));
+  }
+
   static double floorTopY(List<String> rows) {
     for (var y = 0; y < rows.length; y++) {
       if (rows[y].contains('X') || rows[y].contains('H')) {
@@ -22,11 +26,11 @@ class LevelMaps {
 
   static Vector2 mapSizeFor(List<String> rows) {
     final width = rows.first.length * tileSize;
-    final floorTop = floorTopY(rows);
-    final floorH = floorVisualHeightFor(rows);
-    if (floorTop <= 0) {
+    if (!hasFloor(rows)) {
       return Vector2(width, rows.length * tileSize);
     }
+    final floorTop = floorTopY(rows);
+    final floorH = floorVisualHeightFor(rows);
     // Un poco de aire abajo para que el piso no se corte con el borde.
     return Vector2(width, floorTop + floorH + 16);
   }
@@ -68,12 +72,16 @@ class LevelMaps {
     'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
   ];
 
+  /// ~20 islas intercaladas, más abajo, con medialunas. Libra Corp aparece al vencer.
   static const level3 = [
-    '........................................................................',
-    '..............C..............C............C.........C...................',
-    '............====...........====.........====......=======...............',
-    'P.....E........E...........E..............E.....C..............C.....G..',
-    'XXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHH',
-    'XXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHHXXXXXHHHH',
+    '................................................................................................................................',
+    '................................................................................................................................',
+    '................................................................................................................................',
+    '...P............C.......................C...................................C.......................C...........................',
+    '...===.........===.........===.........===.........===.........===.........===.........===.........===.........===..............',
+    '................................................................................................................................',
+    '........===.........===.........===.........===.........===.........===.........===.........===.........===.........===.........',
+    '................................................................................................................................',
+    '................................................................................................................................',
   ];
 }
