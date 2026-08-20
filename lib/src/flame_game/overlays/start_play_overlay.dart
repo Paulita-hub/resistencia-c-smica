@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../resistencia_game.dart';
+import '../../style/jugar_button.dart';
 
 class StartPlayOverlay extends StatelessWidget {
   const StartPlayOverlay({required this.game, super.key});
@@ -11,17 +12,10 @@ class StartPlayOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Align(
-        alignment: Alignment.center,
-        child: FilledButton(
+        alignment: const Alignment(0, 0.3),
+        child: JugarButton(
+          key: const Key('jugar'),
           onPressed: game.beginRun,
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-            textStyle: const TextStyle(
-              fontFamily: 'Permanent Marker',
-              fontSize: 28,
-            ),
-          ),
-          child: const Text('Play'),
         ),
       ),
     );

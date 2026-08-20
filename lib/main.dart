@@ -23,6 +23,7 @@ import 'src/audio/audio_controller.dart';
 import 'src/games_services/games_services.dart';
 import 'src/games_services/score.dart';
 import 'src/in_app_purchase/in_app_purchase.dart';
+import 'src/level_selection/character_select_screen.dart';
 import 'src/level_selection/level_selection_screen.dart';
 import 'src/level_selection/levels.dart';
 import 'src/main_menu/main_menu_screen.dart';
@@ -140,10 +141,20 @@ class MyApp extends StatelessWidget {
             path: 'play',
             pageBuilder: (context, state) => buildMyTransition<void>(
               key: ValueKey('play'),
-              child: const LevelSelectionScreen(key: Key('level selection')),
+              child: const CharacterSelectScreen(key: Key('level selection')),
               color: context.watch<Palette>().backgroundLevelSelection,
             ),
             routes: [
+              GoRoute(
+                path: 'levels',
+                pageBuilder: (context, state) => buildMyTransition<void>(
+                  key: const ValueKey('levels'),
+                  child: const LevelSelectionScreen(
+                    key: Key('level selection'),
+                  ),
+                  color: context.watch<Palette>().backgroundLevelSelection,
+                ),
+              ),
               GoRoute(
                 path: 'session/:level',
                 pageBuilder: (context, state) {

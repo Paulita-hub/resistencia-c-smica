@@ -20,27 +20,30 @@ void main() {
       ),
     );
 
-    // Verify that the 'Play' button is shown.
-    expect(find.text('Play'), findsOneWidget);
+    expect(find.byKey(const Key('jugar')), findsOneWidget);
+    expect(find.byKey(const Key('settings')), findsOneWidget);
 
-    // Verify that the 'Settings' button is shown.
-    expect(find.text('Settings'), findsOneWidget);
-
-    // Go to 'Settings'.
-    await tester.tap(find.text('Settings'));
+    await tester.tap(find.byKey(const Key('settings')));
     await tester.pumpAndSettle();
     expect(find.text('Music'), findsOneWidget);
 
-    // Go back to main menu.
     await tester.tap(find.text('Back'));
     await tester.pumpAndSettle();
 
-    // Tap 'Play'.
-    await tester.tap(find.text('Play'));
+    await tester.tap(find.byKey(const Key('jugar')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('character-select')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('character-1')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('character-1')));
+    await tester.pump();
+    expect(find.byKey(const Key('empezar')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('empezar')));
     await tester.pumpAndSettle();
     expect(find.text('Select level'), findsOneWidget);
 
-    // Tap level 1.
     await tester.tap(find.text('Level #1'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
