@@ -7,6 +7,7 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Resistencia Cósmica, un platformer 2D.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#07020F">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -50,40 +51,62 @@
       font: 700 22px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       pointer-events: none;
     }
-    #rc-fullscreen-btn {
-      position: fixed;
-      z-index: 2147483647;
-      top: max(12px, env(safe-area-inset-top, 0px));
-      left: max(12px, env(safe-area-inset-left, 0px));
-      min-height: 48px;
-      padding: 12px 18px;
-      border: 2px solid #ffffff;
-      border-radius: 14px;
-      background: #12061c;
-      color: #ffffff;
-      font: 700 16px/1.1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      letter-spacing: 0.02em;
-      cursor: pointer;
-      pointer-events: auto;
-      -webkit-tap-highlight-color: transparent;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
-    }
     html.rc-ready #rc-loading {
       display: none !important;
     }
-    html.rc-fullscreen #rc-fullscreen-btn {
+    #rc-fs-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background: #07020F;
+      color: #ffffff;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html.rc-standalone #rc-fs-gate,
+    html.rc-playing #rc-fs-gate {
       display: none !important;
+    }
+    #rc-fs-play {
+      width: 92px;
+      height: 92px;
+      border: 0;
+      border-radius: 50%;
+      background: #d0089a;
+      color: #ffffff;
+      font-size: 42px;
+      line-height: 92px;
+      text-align: center;
+      pointer-events: none;
+      box-shadow: 0 0 0 8px rgba(208, 8, 154, 0.28);
+    }
+    #rc-fs-label {
+      font: 700 20px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      pointer-events: none;
+    }
+    :fullscreen, :-webkit-full-screen {
+      width: 100% !important;
+      height: 100% !important;
+      background: #07020F;
     }
   </style>
 </head>
 <body>
   <div id="rc-loading">Cargando…</div>
-  <button id="rc-fullscreen-btn" type="button">Pantalla completa</button>
+  <div id="rc-fs-gate" role="button" tabindex="0">
+    <div id="rc-fs-play" aria-hidden="true">▶</div>
+    <div id="rc-fs-label">Tocá para jugar</div>
+  </div>
   <script>
     (function () {
       const root = document.documentElement;
-      const btn = document.getElementById('rc-fullscreen-btn');
       const loading = document.getElementById('rc-loading');
+      const gate = document.getElementById('rc-fs-gate');
 
       function markReady() {
         root.classList.add('rc-ready');
@@ -108,43 +131,48 @@
 
       const standalone =
         window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: fullscreen)').matches ||
         window.navigator.standalone === true;
-      if (standalone) {
-        if (btn) btn.remove();
-        return;
-      }
-      if (!btn) return;
 
       function notifyLayout() {
         window.dispatchEvent(new Event('resize'));
       }
 
-      function applyFullscreenUi() {
-        root.classList.add('rc-fullscreen');
-        if (btn.parentNode) btn.remove();
+      function isNativeFullscreen() {
+        return !!(
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.msFullscreenElement
+        );
+      }
+
+      function startPlaying() {
+        root.classList.add('rc-playing');
+        if (gate && gate.parentNode) gate.remove();
         notifyLayout();
       }
 
-      async function requestNativeFullscreen() {
-        const targets = [
-          document.documentElement,
-          document.body,
-          document.querySelector('flt-glass-pane'),
-        ].filter(Boolean);
-
+      function requestPageFullscreen() {
+        const targets = [document.documentElement, document.body];
         for (let i = 0; i < targets.length; i++) {
           const el = targets[i];
           const req =
             el.requestFullscreen ||
             el.webkitRequestFullscreen ||
-            el.webkitRequestFullScreen;
+            el.webkitRequestFullScreen ||
+            el.msRequestFullscreen;
           if (!req) continue;
           try {
-            await req.call(el, { navigationUI: 'hide' });
+            const result = req.call(el, { navigationUI: 'hide' });
+            if (result && typeof result.then === 'function') {
+              result.catch(function () {
+                try { req.call(el); } catch (_) {}
+              });
+            }
             return true;
           } catch (_) {
             try {
-              await req.call(el);
+              req.call(el);
               return true;
             } catch (__) {}
           }
@@ -152,25 +180,41 @@
         return false;
       }
 
-      async function enterFullscreen() {
-        applyFullscreenUi();
-        await requestNativeFullscreen();
+      function enterFullscreen() {
+        if (standalone || isNativeFullscreen()) return;
+        requestPageFullscreen();
         if (screen.orientation && screen.orientation.lock) {
-          try {
-            await screen.orientation.lock('landscape');
-          } catch (_) {}
+          screen.orientation.lock('landscape').catch(function () {});
         }
-        notifyLayout();
       }
 
-      function onActivate(event) {
+      if (standalone) {
+        root.classList.add('rc-standalone');
+        startPlaying();
+        return;
+      }
+
+      let started = false;
+
+      function onPlayGesture(event) {
         event.preventDefault();
         event.stopPropagation();
+        if (started) return;
+        started = true;
         enterFullscreen();
+        startPlaying();
       }
 
-      btn.addEventListener('click', onActivate);
-      btn.addEventListener('touchend', onActivate, { passive: false });
+      if (gate) {
+        gate.addEventListener('pointerup', onPlayGesture);
+        gate.addEventListener('click', onPlayGesture);
+        gate.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter' || event.key === ' ') onPlayGesture(event);
+        });
+      }
+
+      document.addEventListener('fullscreenchange', notifyLayout);
+      document.addEventListener('webkitfullscreenchange', notifyLayout);
     })();
   </script>
   <script src="flutter_bootstrap.js" async></script>

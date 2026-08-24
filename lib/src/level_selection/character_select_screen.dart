@@ -88,6 +88,15 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
     }
   }
 
+  void _closeOpenDetail() {
+    final open = _flips.any((flip) => flip.value > 0.02);
+    if (!open) return;
+    context.read<AudioController>().playSfx(SfxType.buttonTap);
+    for (final flip in _flips) {
+      if (flip.value > 0) flip.reverse();
+    }
+  }
+
   void _openLevels() {
     context.read<AudioController>().playSfx(SfxType.buttonTap);
     GoRouter.of(context).go('/play');
@@ -131,6 +140,7 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
           return AnimatedBuilder(
             animation: Listenable.merge(_flips),
             builder: (context, _) {
+              final openIndex = _flips.indexWhere((flip) => flip.value > 0.02);
               return Stack(
                 clipBehavior: Clip.hardEdge,
                 children: [
@@ -146,13 +156,21 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
                       gaplessPlayback: true,
                     ),
                   ),
-                  for (var i = 0; i < _cards.length; i++)
-                    _buildCard(
-                      index: i,
-                      mapped: mapRect(_cards[i].rect),
-                      detailMapped: mapRect(_centeredDetail),
-                      t: Curves.easeInOut.transform(_flips[i].value),
+                  if (openIndex >= 0)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _closeOpenDetail,
+                      ),
                     ),
+                  for (var i = 0; i < _cards.length; i++)
+                    if (openIndex < 0 || i == openIndex)
+                      _buildCard(
+                        index: i,
+                        mapped: mapRect(_cards[i].rect),
+                        detailMapped: mapRect(_centeredDetail),
+                        t: Curves.easeInOut.transform(_flips[i].value),
+                      ),
                   Positioned.fromRect(
                     rect: back,
                     child: GestureDetector(
@@ -183,9 +201,6 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
     required double t,
   }) {
     final card = _cards[index];
-    final othersOpen = _flips.asMap().entries.any(
-      (entry) => entry.key != index && entry.value.value > 0.05,
-    );
     final rect = Rect.lerp(mapped, detailMapped, t)!;
     final angle = t * math.pi;
     final showBack = t >= 0.5;
@@ -199,13 +214,11 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
 
     return Positioned.fromRect(
       rect: rect,
-      child: IgnorePointer(
-        ignoring: othersOpen,
-        child: GestureDetector(
-          key: Key('character-${index + 1}'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => _toggle(index),
-          child: Stack(
+      child: GestureDetector(
+        key: Key('character-${index + 1}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: t < 0.5 ? () => _toggle(index) : null,
+        child: Stack(
             clipBehavior: Clip.none,
             children: [
               Transform(
@@ -246,7 +259,6 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
             ],
           ),
         ),
-      ),
     );
   }
 }

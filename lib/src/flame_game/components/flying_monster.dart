@@ -17,7 +17,7 @@ class FlyingMonster extends PositionComponent
       );
 
   /// Alto del cuerpo en idle recortado; las ondas de ataque se escalan igual.
-  static const displayHeight = 110.0;
+  static const displayHeight = 130.0;
   static const appearDelay = 3.0;
   static const _idleSrcH = 270.0;
   static const _origHeadX = 490.0;
@@ -114,7 +114,7 @@ class FlyingMonster extends PositionComponent
     final flyX = sin(t * 0.85) * viewW * 0.2 + sin(t * 1.7) * 16;
     final flyY = cos(t * 1.05) * min(34.0, floorTop * 0.18) + sin(t * 2.3) * 8;
     position.x = (centerX + flyX).clamp(camX + viewW * 0.38, camX + viewW * 0.92);
-    position.y = (centerY + flyY).clamp(32.0, max(44.0, floorTop - 116));
+    position.y = (centerY + flyY).clamp(32.0, max(44.0, floorTop - 130));
   }
 
   void _layoutSprite() {

@@ -50,7 +50,6 @@ class Player extends PositionComponent
   final fallSprites = <Sprite>[];
   final attackSprites = <Sprite>[];
   final hypnotizedSprites = <Sprite>[];
-  final sprayFrames = <Sprite>[];
   bool hypnotized = false;
   bool fallingOut = false;
   double _hypnoT = 0;
@@ -64,20 +63,20 @@ class Player extends PositionComponent
 
   void flashAttack() {
     if (hypnotized) return;
-    attackFlash = game.level.number == 3 ? 0.45 : 0.22;
+    attackFlash = game.level.number == 3 ? 0.62 : 0.22;
     facingRight = true;
   }
 
   @override
   Future<void> onLoad() async {
+    await _loadSprites();
     await add(
       RectangleHitbox.relative(
-        Vector2(0.72, 0.9),
+        Vector2(0.62, 0.82),
         parentSize: size,
-        position: Vector2(size.x * 0.14, size.y * 0.1),
+        position: Vector2(size.x * 0.19, size.y * 0.12),
       ),
     );
-    await _loadSprites();
   }
 
   Future<void> _loadSprites() async {
@@ -90,21 +89,13 @@ class Player extends PositionComponent
     fall ??= idle;
     attack ??= idle;
     destello ??= await game.trySprite('items/destellomedialuna.png');
-    if (game.level.number == 3 && sprayFrames.isEmpty) {
-      for (var i = 1; i <= 3; i++) {
-        final frame =
-            await game.trySprite('items/aerosol_$i.png') ??
-            await game.trySprite('levels/3/aerosol_$i.png');
-        if (frame != null) sprayFrames.add(frame);
-      }
-    }
     final body = idle ??
         (run != null ? run!.frames.first.sprite : null) ??
         jump ??
         fall;
     if (body != null) {
       final src = body.srcSize;
-      const w = GameLayout.playerWidth;
+      final w = GameLayout.playerWidthFor(game.level.number);
       size = Vector2(w, (w * src.y / src.x).roundToDouble());
     }
   }
@@ -228,6 +219,7 @@ class Player extends PositionComponent
 
     _moveAxis(dt, horizontal: true);
     _moveAxis(dt, horizontal: false);
+    _tryEatCoins();
 
     if (game.level.number == 3) {
       if (position.y > game.mapSize.y - 6) {
@@ -325,6 +317,7 @@ class Player extends PositionComponent
 
     if (other is Coin) {
       other.eat();
+      return;
     } else if (other is Enemy && !other.stomped) {
       final stomping = velocity.y > 80 && position.y <= other.position.y;
       if (stomping) {
@@ -487,14 +480,14 @@ class Player extends PositionComponent
       ..isAntiAlias = false
       ..style = PaintingStyle.fill;
 
-    // Cono de niebla: ancho cerca del spray, se abre hacia el monstruo.
-    for (var i = 1; i <= 14; i++) {
-      final f = i / 14;
+    // Cono de niebla denso: ancho cerca del spray, se abre hacia el monstruo.
+    for (var i = 1; i <= 32; i++) {
+      final f = i / 32;
       final cx = from.dx + dx * f;
       final cy = from.dy + dy * f;
-      final w = 5.0 + f * 36;
-      final h = 3.5 + f * 22;
-      final a = (0.28 * (1 - f * 0.55)).clamp(0.06, 0.28);
+      final w = 12.0 + f * 78;
+      final h = 8.0 + f * 48;
+      final a = (0.55 * (1 - f * 0.28)).clamp(0.18, 0.55);
       paint.color = Color.fromRGBO(255, 170, 230, a);
       canvas.save();
       canvas.translate(cx, cy);
@@ -506,38 +499,20 @@ class Player extends PositionComponent
       canvas.restore();
     }
 
-    if (sprayFrames.isNotEmpty) {
-      final frame = sprayFrames[(flow / 0.09).floor() % sprayFrames.length];
-      final cloudW = min(72.0, 28.0 + len * 0.18);
-      final cloudL = min(len * 0.7, 96.0);
-      canvas.save();
-      canvas.translate(from.dx, from.dy);
-      canvas.rotate(atan2(uy, ux) - atan2(-0.35, 1.0));
-      frame.render(
-        canvas,
-        position: Vector2(2, -cloudW * 0.42),
-        size: Vector2(cloudL, cloudW),
-        overridePaint: Paint()
-          ..filterQuality = FilterQuality.none
-          ..isAntiAlias = false,
-      );
-      canvas.restore();
-    }
-
-    // Gotas de spray (pixeles), más dispersas cuanto más lejos.
-    for (var i = 0; i < 56; i++) {
-      final along = 0.05 + 0.95 * ((sin(i * 2.3 + flow * 16) + 1) * 0.5);
+    // Gotas de spray (pixeles), más cantidad y más grandes.
+    for (var i = 0; i < 160; i++) {
+      final along = 0.04 + 0.96 * ((sin(i * 2.3 + flow * 16) + 1) * 0.5);
       final frac = (sin(i * 12.9898 + 78.233) * 43758.5453).abs() % 1.0;
-      final spread = along * (10 + 22 * along);
-      final side = ((i.isEven ? 1.0 : -1.0) * spread * (0.25 + frac));
+      final spread = along * (18 + 42 * along);
+      final side = ((i.isEven ? 1.0 : -1.0) * spread * (0.28 + frac));
       final x = from.dx + ux * along * len + px * side;
       final y = from.dy + uy * along * len + py * side;
-      final s = 1.2 + along * 4.2 + frac * 1.4;
-      final alpha = (0.9 - along * 0.5).clamp(0.18, 0.9);
+      final s = 2.4 + along * 8.5 + frac * 2.8;
+      final alpha = (0.95 - along * 0.35).clamp(0.28, 0.95);
       final palette = <Color>[
         Color.fromRGBO(255, 255, 255, alpha),
         Color.fromRGBO(255, 210, 240, alpha),
-        Color.fromRGBO(255, 90, 214, alpha * 0.85),
+        Color.fromRGBO(255, 90, 214, alpha * 0.9),
         Color.fromRGBO(255, 180, 236, alpha),
       ];
       paint.color = palette[i % palette.length];
@@ -547,16 +522,61 @@ class Player extends PositionComponent
       );
     }
 
-    // Mancha al llegar al monstruo.
+    // Destello potente al pegarle al monstruo.
     canvas.save();
     canvas.translate(to.dx, to.dy);
-    final pulse = 0.85 + 0.15 * sin(flow * 20);
-    paint.color = Color.fromRGBO(255, 90, 214, 0.4 * pulse);
-    canvas.drawCircle(Offset.zero, 16 * pulse, paint);
-    paint.color = Color.fromRGBO(255, 180, 236, 0.55 * pulse);
-    canvas.drawCircle(const Offset(3, -2), 10 * pulse, paint);
-    paint.color = Color.fromRGBO(255, 255, 255, 0.7 * pulse);
-    canvas.drawCircle(const Offset(-2, 1), 5 * pulse, paint);
+    final pulse = 0.72 + 0.28 * sin(flow * 24);
+    final flash = 110.0 * pulse;
+
+    if (destello != null) {
+      destello!.render(
+        canvas,
+        position: Vector2(-flash * 1.35, -flash * 1.35),
+        size: Vector2.all(flash * 2.7),
+        overridePaint: Paint()
+          ..blendMode = BlendMode.plus
+          ..filterQuality = FilterQuality.none
+          ..color = Color.fromRGBO(255, 90, 214, 0.9),
+      );
+      destello!.render(
+        canvas,
+        position: Vector2(-flash, -flash),
+        size: Vector2.all(flash * 2),
+        overridePaint: Paint()
+          ..blendMode = BlendMode.plus
+          ..filterQuality = FilterQuality.none
+          ..color = const Color.fromRGBO(255, 255, 255, 1),
+      );
+    }
+
+    paint
+      ..blendMode = BlendMode.plus
+      ..style = PaintingStyle.fill;
+    paint.color = Color.fromRGBO(255, 40, 180, 0.55 * pulse);
+    canvas.drawCircle(Offset.zero, 70 * pulse, paint);
+    paint.color = Color.fromRGBO(255, 90, 214, 0.8 * pulse);
+    canvas.drawCircle(Offset.zero, 46 * pulse, paint);
+    paint.color = Color.fromRGBO(255, 200, 240, 0.9 * pulse);
+    canvas.drawCircle(Offset.zero, 26 * pulse, paint);
+    paint.color = Color.fromRGBO(255, 255, 255, pulse);
+    canvas.drawCircle(Offset.zero, 12 * pulse, paint);
+
+    paint
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    for (var i = 0; i < 10; i++) {
+      final a = flow * 14 + i * pi / 5;
+      final len = 36.0 + 48 * pulse;
+      paint.color = i.isEven
+          ? Color.fromRGBO(255, 243, 106, 0.95)
+          : Color.fromRGBO(255, 255, 255, 1);
+      canvas.drawLine(
+        Offset(cos(a) * 10, sin(a) * 10),
+        Offset(cos(a) * len, sin(a) * len),
+        paint,
+      );
+    }
     canvas.restore();
   }
 
@@ -662,6 +682,15 @@ class Player extends PositionComponent
       }
     }
     return idle;
+  }
+
+  void _tryEatCoins() {
+    final body = toAbsoluteRect().inflate(18);
+    for (final coin in game.world.children.whereType<Coin>()) {
+      if (body.overlaps(coin.toAbsoluteRect())) {
+        coin.eat();
+      }
+    }
   }
 
   bool _hasGroundBelow() {

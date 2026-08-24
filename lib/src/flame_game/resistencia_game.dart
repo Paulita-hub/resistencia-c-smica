@@ -231,17 +231,24 @@ class ResistenciaGame extends FlameGame
                 position: topLeft,
                 size: Vector2.all(tile),
                 platform: true,
-                oneWay: level.number != 1,
+                oneWay: true,
               ),
             );
           case 'C':
             final onFloor =
                 y + 1 < rows.length &&
                 (rows[y + 1][x] == 'X' || rows[y + 1][x] == 'H');
+            final onPlatform =
+                y + 1 < rows.length && rows[y + 1][x] == '=';
             world.add(
               Coin(
                 position: onFloor
                     ? Vector2(topLeft.x + tile / 2, floorTop - 4)
+                    : onPlatform
+                    ? Vector2(
+                        topLeft.x + tile / 2,
+                        (y + 1) * tile - tile * 0.45,
+                      )
                     : topLeft + Vector2.all(tile / 2),
               ),
             );

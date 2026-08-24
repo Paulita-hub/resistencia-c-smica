@@ -14,6 +14,7 @@ class EnergyBar extends StatelessWidget {
     this.slots = ResistenciaGame.energySlots,
     this.headOnRight = false,
     this.theme = EnergyBarTheme.player,
+    this.danger = false,
     super.key,
   });
 
@@ -24,6 +25,7 @@ class EnergyBar extends StatelessWidget {
   final Size headSrcSize;
   final bool headOnRight;
   final EnergyBarTheme theme;
+  final bool danger;
 
   factory EnergyBar.player({
     required ResistenciaGame game,
@@ -35,6 +37,7 @@ class EnergyBar extends StatelessWidget {
         height: height,
         headAsset: 'assets/images/hud/cabezachabon.png',
         headSrcSize: const Size(127, 154),
+        danger: game.energy <= 2,
       );
     }
     if (game.level.number == 3) {
@@ -64,6 +67,7 @@ class EnergyBar extends StatelessWidget {
       headSrcSize: const Size(155, 150),
       headOnRight: true,
       theme: EnergyBarTheme.monster,
+      danger: game.level.number == 2 && game.monsterEnergy <= 2,
     );
   }
 
@@ -105,6 +109,7 @@ class EnergyBar extends StatelessWidget {
           pad: pad,
           gap: gap,
           theme: theme,
+          danger: danger,
         ),
       ),
     );
@@ -128,6 +133,7 @@ class _EnergyTrackPainter extends CustomPainter {
     required this.pad,
     required this.gap,
     required this.theme,
+    required this.danger,
   });
 
   final int filled;
@@ -136,6 +142,7 @@ class _EnergyTrackPainter extends CustomPainter {
   final double pad;
   final double gap;
   final EnergyBarTheme theme;
+  final bool danger;
 
   static const _frame = Color(0xFF020A46);
   static const _frameEdge = Color(0xFF0A4A82);
@@ -178,21 +185,30 @@ class _EnergyTrackPainter extends CustomPainter {
   }
 
   void _drawFilled(Canvas canvas, Rect r, Paint paint) {
-    final outer = theme == EnergyBarTheme.monster
-        ? const Color(0xFF6B1C5A)
-        : const Color(0xFF1F6B1C);
-    final mid = theme == EnergyBarTheme.monster
-        ? const Color(0xFFD0089A)
-        : const Color(0xFF3CD008);
-    final fill = theme == EnergyBarTheme.monster
-        ? const Color(0xFFFF5AD6)
-        : const Color(0xFF8FFF02);
-    final hi = theme == EnergyBarTheme.monster
-        ? const Color(0xFFFFB4EC)
-        : const Color(0xFFC8FF6A);
-    final lo = theme == EnergyBarTheme.monster
-        ? const Color(0xFFA80478)
-        : const Color(0xFF2EA804);
+    final Color outer;
+    final Color mid;
+    final Color fill;
+    final Color hi;
+    final Color lo;
+    if (danger) {
+      outer = const Color(0xFF6B1212);
+      mid = const Color(0xFFD00808);
+      fill = const Color(0xFFFF2A2A);
+      hi = const Color(0xFFFFB0B0);
+      lo = const Color(0xFFA80404);
+    } else if (theme == EnergyBarTheme.monster) {
+      outer = const Color(0xFF6B1C5A);
+      mid = const Color(0xFFD0089A);
+      fill = const Color(0xFFFF5AD6);
+      hi = const Color(0xFFFFB4EC);
+      lo = const Color(0xFFA80478);
+    } else {
+      outer = const Color(0xFF1F6B1C);
+      mid = const Color(0xFF3CD008);
+      fill = const Color(0xFF8FFF02);
+      hi = const Color(0xFFC8FF6A);
+      lo = const Color(0xFF2EA804);
+    }
 
     paint.color = outer;
     canvas.drawRect(r, paint);
@@ -221,6 +237,7 @@ class _EnergyTrackPainter extends CustomPainter {
         oldDelegate.cell != cell ||
         oldDelegate.pad != pad ||
         oldDelegate.gap != gap ||
-        oldDelegate.theme != theme;
+        oldDelegate.theme != theme ||
+        oldDelegate.danger != danger;
   }
 }

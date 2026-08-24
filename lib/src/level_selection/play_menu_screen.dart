@@ -65,42 +65,44 @@ class PlayMenuScreen extends StatelessWidget {
                     horizontal: 24 * scale,
                     vertical: 28 * scale,
                   ),
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _MenuButton(
-                          key: const Key('choose-character'),
-                          asset: 'assets/images/ui/btn_choose_character.png',
-                          srcSize: const Size(725, 156),
-                          scale: btnScale,
-                          onPressed: () => tap(
-                            () => GoRouter.of(context).go('/play/characters'),
-                          ),
-                        ),
-                        SizedBox(height: 10 * btnScale),
-                        _MenuButton(
-                          asset: 'assets/images/ui/btn_levels.png',
-                          srcSize: const Size(395, 127),
-                          scale: btnScale,
-                        ),
-                        SizedBox(height: 8 * btnScale),
-                        for (var level = 1; level <= 3; level++) ...[
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           _MenuButton(
-                            key: Key('level-$level'),
-                            asset: 'assets/images/ui/btn_level_$level.png',
-                            srcSize: const Size(403, 156),
-                            scale: btnScale,
-                            enabled: progress.highestLevelReached >= level - 1,
+                            key: const Key('choose-character'),
+                            asset: 'assets/images/ui/btn_choose_character.png',
+                            srcSize: const Size(725, 156),
+                            scale: btnScale * 0.6,
                             onPressed: () => tap(
-                              () => GoRouter.of(context)
-                                  .go('/play/session/$level'),
+                              () => GoRouter.of(context).go('/play/characters'),
                             ),
                           ),
-                          if (level < 3) SizedBox(height: 6 * btnScale),
+                          SizedBox(height: 10 * btnScale * 0.6),
+                          _MenuButton(
+                            asset: 'assets/images/ui/btn_levels.png',
+                            srcSize: const Size(395, 127),
+                            scale: btnScale * 0.6,
+                          ),
+                          SizedBox(height: 8 * btnScale * 0.6),
+                          for (var level = 1; level <= 3; level++) ...[
+                            _MenuButton(
+                              key: Key('level-$level'),
+                              asset: 'assets/images/ui/btn_level_$level.png',
+                              srcSize: const Size(403, 156),
+                              scale: btnScale * 0.6,
+                              enabled: progress.highestLevelReached >= level - 1,
+                              onPressed: () => tap(
+                                () => GoRouter.of(context)
+                                    .go('/play/session/$level'),
+                              ),
+                            ),
+                            if (level < 3) SizedBox(height: 6 * btnScale * 0.6),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),

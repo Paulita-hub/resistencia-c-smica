@@ -22,7 +22,7 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
 
   static const _hudPriority = 100;
 
-  late final HorizontalJoystickComponent joystick;
+  HorizontalJoystickComponent? joystick;
   late final HudButtonComponent jumpButton;
   HudButtonComponent? attackButton;
   HudButtonComponent? useButton;
@@ -36,34 +36,35 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
 
   @override
   Future<void> onLoad() async {
-    final backgroundSprite = await game.loadSprite(backgroundPath);
-    final knobSprite = await game.loadSprite(knobPath);
     final jumpSprite = await game.loadSprite(jumpPath);
-    final attackSprite = await game.loadSprite(attackPath);
-    final itemSprite = await game.loadSprite(itemPath);
 
     final safe = _safeInsets();
     final ui = game.size.y > 0 ? game.size.y / GameLayout.height : 1.0;
-    final joyBg = GameLayout.joystick * ui;
-    final joyKnob = GameLayout.joystickKnob * ui;
     final jumpSize = GameLayout.jumpButton * ui;
-    final attackSize = GameLayout.attackButton * ui;
 
-    joystick = HorizontalJoystickComponent(
-      knob: SpriteComponent(
-        sprite: knobSprite,
-        size: Vector2.all(joyKnob),
-      ),
-      background: SpriteComponent(
-        sprite: backgroundSprite,
-        size: Vector2.all(joyBg),
-      ),
-      margin: EdgeInsets.only(
-        left: 36 + safe.left,
-        bottom: 40 + safe.bottom,
-      ),
-      priority: _hudPriority,
-    );
+    if (game.manualMove) {
+      final backgroundSprite = await game.loadSprite(backgroundPath);
+      final knobSprite = await game.loadSprite(knobPath);
+      final joyBg = GameLayout.joystick * ui;
+      final joyKnob = GameLayout.joystickKnob * ui;
+      joystick = HorizontalJoystickComponent(
+        knob: SpriteComponent(
+          sprite: knobSprite,
+          size: Vector2.all(joyKnob),
+          paint: _joystickPaint(),
+        ),
+        background: SpriteComponent(
+          sprite: backgroundSprite,
+          size: Vector2.all(joyBg),
+          paint: _joystickPaint(),
+        ),
+        margin: EdgeInsets.only(
+          left: 36 + safe.left,
+          bottom: 40 + safe.bottom,
+        ),
+        priority: _hudPriority,
+      );
+    }
 
     jumpButton = _actionButton(
       sprite: jumpSprite,
@@ -77,36 +78,56 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
       onReleased: () => game.input.hudJump = false,
     );
 
-    attackButton = _actionButton(
-      sprite: attackSprite,
-      label: 'Atacar',
-      size: attackSize,
-      margin: EdgeInsets.only(
-        right: 28 + jumpSize + 20 + safe.right,
-        bottom: 48 + safe.bottom,
-      ),
-      onPressed: game.tapAttack,
-    );
-
-    useButton = _actionButton(
-      sprite: itemSprite,
-      label: 'Usar',
-      size: 140,
-      margin: EdgeInsets.only(
-        right: 48 + safe.right,
-        bottom: 36 + jumpSize + 24 + safe.bottom,
-      ),
-      onPressed: game.useItem,
-    );
-
-    await game.camera.viewport.add(joystick);
-    await game.camera.viewport.add(jumpButton);
     if (game.canAttack) {
+      final attackSprite = await game.loadSprite(attackPath);
+      final attackSize = GameLayout.attackButton * ui;
+      attackButton = _actionButton(
+        sprite: attackSprite,
+        label: 'Atacar',
+        size: attackSize,
+        margin: EdgeInsets.only(
+          right: 28 + jumpSize + 20 + safe.right,
+          bottom: 48 + safe.bottom,
+        ),
+        onPressed: game.tapAttack,
+      );
+    }
+
+    if (game.canUseItem) {
+      final itemSprite = await game.loadSprite(itemPath);
+      useButton = _actionButton(
+        sprite: itemSprite,
+        label: 'Usar',
+        size: 140,
+        margin: EdgeInsets.only(
+          right: 48 + safe.right,
+          bottom: 36 + jumpSize + 24 + safe.bottom,
+        ),
+        onPressed: game.useItem,
+      );
+    }
+
+    if (joystick != null) {
+      await game.camera.viewport.add(joystick!);
+    }
+    await game.camera.viewport.add(jumpButton);
+    if (attackButton != null) {
       await game.camera.viewport.add(attackButton!);
     }
-    if (game.canUseItem) {
+    if (useButton != null) {
       await game.camera.viewport.add(useButton!);
     }
+  }
+
+  static Paint _joystickPaint() {
+    return Paint()
+      ..filterQuality = FilterQuality.none
+      ..colorFilter = const ColorFilter.matrix(<double>[
+        1, 0, 0, 0, 18,
+        0, 1, 0, 0, 18,
+        0, 0, 1, 0, 18,
+        0, 0, 0, 2.8, 0,
+      ]);
   }
 
   HudButtonComponent _actionButton({
@@ -118,12 +139,31 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
     void Function()? onReleased,
   }) {
     final buttonSize = Vector2.all(size);
+    final downSize = buttonSize * 0.86;
+    final downOffset = (buttonSize - downSize) / 2 + Vector2(0, size * 0.05);
     return HudButtonComponent(
       button: SpriteComponent(sprite: sprite, size: buttonSize),
-      buttonDown: SpriteComponent(
-        sprite: sprite,
+      buttonDown: PositionComponent(
         size: buttonSize,
-      )..opacity = 0.55,
+        children: [
+          CircleComponent(
+            radius: size * 0.5,
+            position: buttonSize / 2,
+            anchor: Anchor.center,
+            paint: Paint()..color = const Color(0x66FFFFFF),
+          ),
+          SpriteComponent(
+            sprite: sprite,
+            size: downSize,
+            position: downOffset,
+            paint: Paint()
+              ..colorFilter = const ColorFilter.mode(
+                Color(0x88FFFFFF),
+                BlendMode.srcATop,
+              ),
+          ),
+        ],
+      ),
       margin: margin,
       onPressed: onPressed,
       onReleased: () {
@@ -141,7 +181,7 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
           textRenderer: TextPaint(
             style: const TextStyle(
               color: Color(0xFFFFFFFF),
-              fontSize: 22,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               shadows: [
                 Shadow(color: Color(0xCC000000), blurRadius: 4),
@@ -156,15 +196,16 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
   @override
   void update(double dt) {
     super.update(dt);
-    if (!joystick.isMounted) return;
-    game.input.joystickX = joystick.relativeDelta.x;
+    final stick = joystick;
+    if (stick == null || !stick.isMounted) return;
+    game.input.joystickX = stick.relativeDelta.x;
   }
 
   @override
   void onRemove() {
     game.input.joystickX = 0;
     game.input.hudJump = false;
-    joystick.removeFromParent();
+    joystick?.removeFromParent();
     jumpButton.removeFromParent();
     attackButton?.removeFromParent();
     useButton?.removeFromParent();

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 
@@ -23,22 +22,31 @@ class Coin extends PositionComponent
   Sprite? sprite;
   bool _eaten = false;
 
+  double get _width => GameLayout.coinWidthFor(game.level.number);
+
   @override
   Future<void> onLoad() async {
-    await add(CircleHitbox(collisionType: CollisionType.passive));
-    unawaited(_loadSprite());
+    await _loadSprite();
+    await add(
+      RectangleHitbox.relative(
+        Vector2(1.35, 1.45),
+        parentSize: size,
+        position: Vector2(-size.x * 0.175, -size.y * 0.225),
+        collisionType: CollisionType.passive,
+      ),
+    );
   }
 
   Future<void> _loadSprite() async {
     sprite =
         await game.trySprite('items/food.png') ??
         await game.trySprite('items/star.png');
+    final w = _width;
     if (sprite != null) {
       final src = sprite!.srcSize;
-      size = Vector2(
-        GameLayout.coinWidth,
-        GameLayout.coinWidth * src.y / src.x,
-      );
+      size = Vector2(w, w * src.y / src.x);
+    } else {
+      size = Vector2(w, w * 0.6);
     }
   }
 
