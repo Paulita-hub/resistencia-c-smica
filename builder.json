@@ -1,0 +1,16 @@
+{
+  "project": "Resistencia Cosmica",
+  "platform": "ios",
+  "github": {
+    "owner": "Paulita-hub",
+    "repo": "resistencia-c-smica"
+  },
+  "ios": {
+    "path": "ios",
+    "scheme": "Runner",
+    "signing": false
+  },
+  "flutter": {
+    "version": "3.47.0"
+  }
+}

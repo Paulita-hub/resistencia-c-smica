@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
+import '../game_layout.dart';
 import '../level_maps.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
@@ -14,6 +15,7 @@ class SolidBlock extends PositionComponent
     required Vector2 position,
     required Vector2 size,
     this.platform = false,
+    this.oneWay = false,
   }) : super(
          position: position,
          size: size,
@@ -22,6 +24,8 @@ class SolidBlock extends PositionComponent
        );
 
   final bool platform;
+  /// If true, you can jump through from below. Level 1 platforms are solid.
+  final bool oneWay;
   Sprite? sprite;
 
   @override
@@ -38,7 +42,13 @@ class SolidBlock extends PositionComponent
     if (loaded == null) return;
     final src = loaded.srcSize;
     final tile = LevelMaps.tileSize;
-    size = Vector2(size.x, src.y * (tile / src.x));
+    final fitted = src.y * (tile / src.x);
+    size = Vector2(
+      size.x,
+      fitted < GameLayout.platformMinHeight
+          ? GameLayout.platformMinHeight
+          : fitted,
+    );
     sprite = loaded;
   }
 

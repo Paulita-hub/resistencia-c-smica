@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flame/camera.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -9,7 +10,6 @@ import 'package:flutter/widgets.dart';
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
 import '../level_selection/levels.dart';
-import 'components/aerosol_burst.dart';
 import 'components/chainsaw_monster.dart';
 import 'components/circuit_background.dart';
 import 'components/coin.dart';
@@ -79,8 +79,12 @@ class ResistenciaGame extends FlameGame
   static const pauseOverlay = 'pause';
   static const winOverlay = 'win';
 
+  double get viewWidth => size.x;
+  double get viewHeight => size.y;
+
   @override
   Future<void> onLoad() async {
+    camera.viewport = MaxViewport();
     await _loadBackdrop();
     _loadLevel();
     _setupCamera();
@@ -93,6 +97,9 @@ class ResistenciaGame extends FlameGame
     super.onGameResize(size);
     if (isLoaded) {
       _setupCamera();
+      if (started && !gameOver && !_won && mobileHud != null) {
+        _showMobileHud();
+      }
     }
   }
 
@@ -101,7 +108,7 @@ class ResistenciaGame extends FlameGame
     camera.stop();
     camera.setBounds(null);
     camera.viewfinder.anchor = Anchor.topLeft;
-    // Toda la altura del mapa entra en pantalla: el piso queda abajo, visible.
+    // Toda la altura del mapa entra en el lienzo 1920×1080: el piso queda abajo.
     camera.viewfinder.zoom = size.y / mapSize.y;
     _scrollCameraX();
   }
@@ -109,7 +116,7 @@ class ResistenciaGame extends FlameGame
   void _scrollCameraX([double dt = 0]) {
     final zoom = camera.viewfinder.zoom;
     if (zoom.isNaN || zoom <= 0) return;
-    final viewW = size.x / zoom;
+    final viewW = viewWidth / zoom;
     final maxX = max(0.0, mapSize.x - viewW);
     if (started && !finished && !gameOver && !manualMove) {
       _cameraX += Player.moveSpeed * dt;
@@ -224,6 +231,7 @@ class ResistenciaGame extends FlameGame
                 position: topLeft,
                 size: Vector2.all(tile),
                 platform: true,
+                oneWay: level.number != 1,
               ),
             );
           case 'C':
@@ -314,12 +322,15 @@ class ResistenciaGame extends FlameGame
   void tapAttack() {
     if (!started || finished || gameOver || !canAttack) return;
     player.flashAttack();
-    if (level.number == 3) {
-      _spawnAerosol();
-    }
     if (!monsterReady) {
       audio.playSfx(SfxType.buttonTap);
       return;
+    }
+    if (level.number == 3) {
+      for (final monster in world.children.whereType<ChainsawMonster>()) {
+        if (!monster.appeared || monster.dying) continue;
+        monster.stun();
+      }
     }
     attackCharge++;
     audio.playSfx(SfxType.buttonTap);
@@ -375,33 +386,6 @@ class ResistenciaGame extends FlameGame
       return;
     }
     player.invulnerableTime = 0.55;
-  }
-
-  void _spawnAerosol() {
-    final origin = Vector2(
-      player.position.x + player.size.x * 0.72,
-      player.position.y - player.size.y * 0.52,
-    );
-    final target = _monsterAimPoint();
-    final dir = (target - origin);
-    if (dir.length2 < 1) {
-      dir.setValues(1, -0.2);
-    }
-    dir.normalize();
-    for (final angle in [-0.2, 0.0, 0.2]) {
-      final spray = dir.clone()..rotate(angle);
-      world.add(AerosolBurst(position: origin.clone(), dir: spray));
-    }
-  }
-
-  Vector2 _monsterAimPoint() {
-    for (final monster in world.children.whereType<ChainsawMonster>()) {
-      return monster.position.clone();
-    }
-    final zoom = camera.viewfinder.zoom;
-    final viewW = zoom > 0 ? size.x / zoom : 400.0;
-    final camX = camera.viewfinder.position.x;
-    return Vector2(camX + viewW * 0.72, mapSize.y * 0.38);
   }
 
   void laserHitPlayer() {

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
 import '../style/jugar_button.dart';
+import '../style/letterbox.dart';
 import '../style/palette.dart';
 
 class MainMenuScreen extends StatelessWidget {
@@ -25,22 +24,17 @@ class MainMenuScreen extends StatelessWidget {
       backgroundColor: palette.backgroundMain,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final scale = math.max(
-            constraints.maxWidth / _design.width,
-            constraints.maxHeight / _design.height,
-          );
-          final drawnW = _design.width * scale;
-          final drawnH = _design.height * scale;
-          final ox = (constraints.maxWidth - drawnW) / 2;
-          final oy = (constraints.maxHeight - drawnH) / 2;
+          final frame = LetterboxFrame.of(constraints.biggest, _design);
+          final pad = MediaQuery.paddingOf(context);
 
           return Stack(
+            clipBehavior: Clip.hardEdge,
             children: [
               Positioned(
-                left: ox,
-                top: oy,
-                width: drawnW,
-                height: drawnH,
+                left: frame.offset.dx,
+                top: frame.offset.dy,
+                width: frame.drawn.width,
+                height: frame.drawn.height,
                 child: Image.asset(
                   'assets/images/ui/cover.png',
                   fit: BoxFit.fill,
@@ -49,13 +43,14 @@ class MainMenuScreen extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: ox + (_design.width - _buttonSize.width) / 2 * scale,
-                top: oy + _buttonTop * scale,
-                width: _buttonSize.width * scale,
-                height: _buttonSize.height * scale,
+                left: frame.offset.dx +
+                    (_design.width - _buttonSize.width) / 2 * frame.scale,
+                top: frame.offset.dy + _buttonTop * frame.scale,
+                width: _buttonSize.width * frame.scale,
+                height: _buttonSize.height * frame.scale,
                 child: JugarButton(
                   key: const Key('jugar'),
-                  height: _buttonSize.height * scale,
+                  height: _buttonSize.height * frame.scale,
                   onPressed: () {
                     audioController.playSfx(SfxType.buttonTap);
                     GoRouter.of(context).go('/play');
@@ -63,8 +58,8 @@ class MainMenuScreen extends StatelessWidget {
                 ),
               ),
               Positioned(
-                top: 12,
-                right: 12,
+                top: pad.top + 8,
+                right: pad.right + 8,
                 child: IconButton(
                   key: const Key('settings'),
                   tooltip: 'Ajustes',

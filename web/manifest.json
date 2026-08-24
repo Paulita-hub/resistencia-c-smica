@@ -1,12 +1,12 @@
 {
-    "name": "game_template",
-    "short_name": "game_template",
+    "name": "Resistencia Cósmica",
+    "short_name": "Resistencia",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#07020F",
+    "theme_color": "#07020F",
+    "description": "Resistencia Cósmica, un platformer 2D.",
+    "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [
         {

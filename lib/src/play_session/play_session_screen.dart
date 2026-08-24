@@ -19,7 +19,6 @@ import '../games_services/score.dart';
 import '../in_app_purchase/in_app_purchase.dart';
 import '../level_selection/levels.dart';
 import '../player_progress/player_progress.dart';
-import '../style/palette.dart';
 
 class PlaySessionScreen extends StatefulWidget {
   final GameLevel level;
@@ -55,59 +54,59 @@ class _PlaySessionScreenState extends State<PlaySessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
-
     return Scaffold(
-      backgroundColor: palette.backgroundPlaySession,
-      body: GameWidget<ResistenciaGame>(
-        game: _game,
-        overlayBuilderMap: {
-          ResistenciaGame.hudOverlay: (context, game) => GameHud(
-            game: game,
-            onSettings: () async {
-              game.pauseEngine();
-              await GoRouter.of(context).push('/settings');
-              if (!context.mounted) return;
-              if (game.overlays.isActive(ResistenciaGame.pauseOverlay)) {
-                return;
-              }
-              if (!game.gameOver) game.resumeEngine();
-            },
-            onPause: game.pauseGame,
-          ),
-          ResistenciaGame.gameOverOverlay: (context, game) {
-            return GameOverOverlay(
+      backgroundColor: Colors.black,
+      body: SizedBox.expand(
+        child: GameWidget<ResistenciaGame>(
+          game: _game,
+          overlayBuilderMap: {
+            ResistenciaGame.hudOverlay: (context, game) => GameHud(
               game: game,
-              onRetry: game.restartLevel,
-              onExit: () => GoRouter.of(context).go('/play'),
-            );
-          },
-          ResistenciaGame.pauseOverlay: (context, game) {
-            return PauseOverlay(
-              game: game,
-              onExit: () => GoRouter.of(context).go('/play'),
-            );
-          },
-          ResistenciaGame.playOverlay: (context, game) {
-            return StartPlayOverlay(game: game);
-          },
-          ResistenciaGame.winOverlay: (context, game) {
-            return VictoryOverlay(
-              game: game,
-              onRetry: game.restartLevel,
-              onExit: () => GoRouter.of(context).go('/play'),
-              onNext: () {
-                final next = game.level.number + 1;
-                final exists = gameLevels.any((level) => level.number == next);
-                if (exists) {
-                  GoRouter.of(context).go('/play/session/$next');
-                } else {
-                  GoRouter.of(context).go('/play');
+              onSettings: () async {
+                game.pauseEngine();
+                await GoRouter.of(context).push('/settings');
+                if (!context.mounted) return;
+                if (game.overlays.isActive(ResistenciaGame.pauseOverlay)) {
+                  return;
                 }
+                if (!game.gameOver) game.resumeEngine();
               },
-            );
+              onPause: game.pauseGame,
+            ),
+            ResistenciaGame.gameOverOverlay: (context, game) {
+              return GameOverOverlay(
+                game: game,
+                onRetry: game.restartLevel,
+                onExit: () => GoRouter.of(context).go('/play'),
+              );
+            },
+            ResistenciaGame.pauseOverlay: (context, game) {
+              return PauseOverlay(
+                game: game,
+                onExit: () => GoRouter.of(context).go('/play'),
+              );
+            },
+            ResistenciaGame.playOverlay: (context, game) {
+              return StartPlayOverlay(game: game);
+            },
+            ResistenciaGame.winOverlay: (context, game) {
+              return VictoryOverlay(
+                game: game,
+                onRetry: game.restartLevel,
+                onExit: () => GoRouter.of(context).go('/play'),
+                onNext: () {
+                  final next = game.level.number + 1;
+                  final exists = gameLevels.any((level) => level.number == next);
+                  if (exists) {
+                    GoRouter.of(context).go('/play/session/$next');
+                  } else {
+                    GoRouter.of(context).go('/play');
+                  }
+                },
+              );
+            },
           },
-        },
+        ),
       ),
     );
   }

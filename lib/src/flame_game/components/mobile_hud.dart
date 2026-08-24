@@ -1,7 +1,8 @@
 import 'package:flame/components.dart';
 import 'package:flame/input.dart';
-import 'package:flutter/painting.dart';
+import 'package:flutter/widgets.dart';
 
+import '../game_layout.dart';
 import '../resistencia_game.dart';
 
 /// Controles táctiles fijos en el viewport (no se mueven con la cámara).
@@ -26,6 +27,13 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
   HudButtonComponent? attackButton;
   HudButtonComponent? useButton;
 
+  EdgeInsets _safeInsets() {
+    final ctx = game.buildContext;
+    if (ctx == null || !ctx.mounted) return EdgeInsets.zero;
+    final pad = MediaQuery.paddingOf(ctx);
+    return pad;
+  }
+
   @override
   Future<void> onLoad() async {
     final backgroundSprite = await game.loadSprite(backgroundPath);
@@ -34,11 +42,12 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
     final attackSprite = await game.loadSprite(attackPath);
     final itemSprite = await game.loadSprite(itemPath);
 
-    final compact = game.size.y < 520;
-    final joyBg = compact ? 88.0 : 112.0;
-    final joyKnob = compact ? 44.0 : 56.0;
-    final jumpSize = compact ? 62.0 : 76.0;
-    final attackSize = compact ? 56.0 : 68.0;
+    final safe = _safeInsets();
+    final ui = game.size.y > 0 ? game.size.y / GameLayout.height : 1.0;
+    final joyBg = GameLayout.joystick * ui;
+    final joyKnob = GameLayout.joystickKnob * ui;
+    final jumpSize = GameLayout.jumpButton * ui;
+    final attackSize = GameLayout.attackButton * ui;
 
     joystick = HorizontalJoystickComponent(
       knob: SpriteComponent(
@@ -49,7 +58,10 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
         sprite: backgroundSprite,
         size: Vector2.all(joyBg),
       ),
-      margin: EdgeInsets.only(left: compact ? 20 : 36, bottom: compact ? 16 : 24),
+      margin: EdgeInsets.only(
+        left: 36 + safe.left,
+        bottom: 40 + safe.bottom,
+      ),
       priority: _hudPriority,
     );
 
@@ -57,7 +69,10 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
       sprite: jumpSprite,
       label: 'Saltar',
       size: jumpSize,
-      margin: EdgeInsets.only(right: compact ? 18 : 28, bottom: compact ? 14 : 24),
+      margin: EdgeInsets.only(
+        right: 28 + safe.right,
+        bottom: 36 + safe.bottom,
+      ),
       onPressed: () => game.input.hudJump = true,
       onReleased: () => game.input.hudJump = false,
     );
@@ -67,18 +82,20 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
       label: 'Atacar',
       size: attackSize,
       margin: EdgeInsets.only(
-        right: compact ? 88 : 118,
-        bottom: compact ? 16 : 28,
+        right: 28 + jumpSize + 20 + safe.right,
+        bottom: 48 + safe.bottom,
       ),
       onPressed: game.tapAttack,
     );
 
-    // Tercer botón del cluster (Usar objeto). Sin mecánica propia todavía.
     useButton = _actionButton(
       sprite: itemSprite,
       label: 'Usar',
-      size: 64,
-      margin: const EdgeInsets.only(right: 58, bottom: 112),
+      size: 140,
+      margin: EdgeInsets.only(
+        right: 48 + safe.right,
+        bottom: 36 + jumpSize + 24 + safe.bottom,
+      ),
       onPressed: game.useItem,
     );
 
@@ -124,7 +141,7 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
           textRenderer: TextPaint(
             style: const TextStyle(
               color: Color(0xFFFFFFFF),
-              fontSize: 13,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
               shadows: [
                 Shadow(color: Color(0xCC000000), blurRadius: 4),

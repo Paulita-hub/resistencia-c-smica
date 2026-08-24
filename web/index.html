@@ -1,39 +1,178 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
-
-  <!-- iOS meta tags & icons -->
+  <meta name="description" content="Resistencia Cósmica, un platformer 2D.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="game_template">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Resistencia Cósmica">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>game_template</title>
+  <title>Resistencia Cósmica</title>
   <link rel="manifest" href="manifest.json">
-
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #07020F;
+      touch-action: manipulation;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    flutter-view,
+    flt-glass-pane {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      display: block !important;
+    }
+    #rc-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483646;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #07020F;
+      color: #ffffff;
+      font: 700 22px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      pointer-events: none;
+    }
+    #rc-fullscreen-btn {
+      position: fixed;
+      z-index: 2147483647;
+      top: max(12px, env(safe-area-inset-top, 0px));
+      left: max(12px, env(safe-area-inset-left, 0px));
+      min-height: 48px;
+      padding: 12px 18px;
+      border: 2px solid #ffffff;
+      border-radius: 14px;
+      background: #12061c;
+      color: #ffffff;
+      font: 700 16px/1.1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    }
+    html.rc-ready #rc-loading {
+      display: none !important;
+    }
+    html.rc-fullscreen #rc-fullscreen-btn {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
+  <div id="rc-loading">Cargando…</div>
+  <button id="rc-fullscreen-btn" type="button">Pantalla completa</button>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('rc-fullscreen-btn');
+      const loading = document.getElementById('rc-loading');
+
+      function markReady() {
+        root.classList.add('rc-ready');
+        if (loading && loading.parentNode) loading.remove();
+        window.dispatchEvent(new Event('resize'));
+      }
+
+      window.addEventListener('flutter-first-frame', markReady);
+      window.addEventListener('load', function () {
+        if (document.querySelector('flt-glass-pane, flutter-view, canvas')) {
+          markReady();
+        }
+      });
+      const readyWatch = new MutationObserver(function () {
+        if (document.querySelector('flt-glass-pane, flutter-view, canvas')) {
+          markReady();
+          readyWatch.disconnect();
+        }
+      });
+      readyWatch.observe(document.documentElement, { childList: true, subtree: true });
+      window.setTimeout(markReady, 8000);
+
+      const standalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+      if (standalone) {
+        if (btn) btn.remove();
+        return;
+      }
+      if (!btn) return;
+
+      function notifyLayout() {
+        window.dispatchEvent(new Event('resize'));
+      }
+
+      function applyFullscreenUi() {
+        root.classList.add('rc-fullscreen');
+        if (btn.parentNode) btn.remove();
+        notifyLayout();
+      }
+
+      async function requestNativeFullscreen() {
+        const targets = [
+          document.documentElement,
+          document.body,
+          document.querySelector('flt-glass-pane'),
+        ].filter(Boolean);
+
+        for (let i = 0; i < targets.length; i++) {
+          const el = targets[i];
+          const req =
+            el.requestFullscreen ||
+            el.webkitRequestFullscreen ||
+            el.webkitRequestFullScreen;
+          if (!req) continue;
+          try {
+            await req.call(el, { navigationUI: 'hide' });
+            return true;
+          } catch (_) {
+            try {
+              await req.call(el);
+              return true;
+            } catch (__) {}
+          }
+        }
+        return false;
+      }
+
+      async function enterFullscreen() {
+        applyFullscreenUi();
+        await requestNativeFullscreen();
+        if (screen.orientation && screen.orientation.lock) {
+          try {
+            await screen.orientation.lock('landscape');
+          } catch (_) {}
+        }
+        notifyLayout();
+      }
+
+      function onActivate(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        enterFullscreen();
+      }
+
+      btn.addEventListener('click', onActivate);
+      btn.addEventListener('touchend', onActivate, { passive: false });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

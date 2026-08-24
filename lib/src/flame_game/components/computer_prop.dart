@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../game_layout.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
 
@@ -17,7 +18,7 @@ class ComputerProp extends SpriteComponent
 
   final String asset;
 
-  static const displayHeight = 82.0 * 0.7;
+  static const displayHeight = GameLayout.tileSize * 1.2;
 
   @override
   Future<void> onLoad() async {

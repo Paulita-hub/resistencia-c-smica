@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
+import '../game_layout.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
 import 'medialuna_flash.dart';
@@ -14,7 +15,7 @@ class Coin extends PositionComponent
   Coin({required Vector2 position})
     : super(
         position: position,
-        size: Vector2(20, 12),
+        size: Vector2(GameLayout.coinWidth, GameLayout.coinWidth * 0.6),
         anchor: Anchor.center,
       );
 
@@ -34,7 +35,10 @@ class Coin extends PositionComponent
         await game.trySprite('items/star.png');
     if (sprite != null) {
       final src = sprite!.srcSize;
-      size = Vector2(20, 20 * src.y / src.x);
+      size = Vector2(
+        GameLayout.coinWidth,
+        GameLayout.coinWidth * src.y / src.x,
+      );
     }
   }
 
@@ -53,7 +57,7 @@ class Coin extends PositionComponent
     super.update(dt);
     if (!game.started) return;
     _t += dt * 6;
-    position.y += sin(_t) * 12 * dt;
+    position.y += sin(_t) * 24 * dt;
   }
 
   @override

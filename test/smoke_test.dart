@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_template/main.dart';
 import 'package:game_template/src/player_progress/persistence/memory_player_progress_persistence.dart';
@@ -9,7 +10,11 @@ import 'package:game_template/src/settings/persistence/memory_settings_persisten
 
 void main() {
   testWidgets('smoke test', (tester) async {
-    // Build our game and trigger a frame.
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       MyApp(
         settingsPersistence: MemoryOnlySettingsPersistence(),
@@ -32,21 +37,11 @@ void main() {
 
     await tester.tap(find.byKey(const Key('jugar')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('character-select')), findsOneWidget);
+    expect(find.byKey(const Key('play-menu')), findsOneWidget);
+    expect(find.byKey(const Key('choose-character')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('character-1')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('character-1')));
-    await tester.pump();
-    expect(find.byKey(const Key('empezar')), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('empezar')));
+    await tester.tap(find.byKey(const Key('level-1')));
     await tester.pumpAndSettle();
-    expect(find.text('Select level'), findsOneWidget);
-
-    await tester.tap(find.text('Level #1'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Saltar'), findsOneWidget);
+    expect(find.byKey(const Key('play session')), findsOneWidget);
   });
 }

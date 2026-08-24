@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../game_layout.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
 
@@ -11,7 +12,7 @@ class MedialunaFlash extends PositionComponent
   MedialunaFlash({required Vector2 position, this.food})
     : super(
         position: position,
-        size: Vector2.all(48),
+        size: Vector2.all(GameLayout.coinWidth),
         anchor: Anchor.center,
         priority: 18,
       );
@@ -44,7 +45,7 @@ class MedialunaFlash extends PositionComponent
     canvas.translate(size.x / 2, size.y / 2);
 
     if (destello != null) {
-      final flash = 36.0 * (1.0 + p * 1.4);
+      final flash = GameLayout.coinWidth * 1.6 * (1.0 + p * 1.4);
       destello!.render(
         canvas,
         position: Vector2(-flash / 2, -flash / 2),
@@ -57,7 +58,7 @@ class MedialunaFlash extends PositionComponent
 
     if (food != null) {
       final src = food!.srcSize;
-      final fw = 20.0 * (1 - p * 0.45);
+      final fw = GameLayout.coinWidth * (1 - p * 0.45);
       final fh = fw * src.y / src.x;
       food!.render(
         canvas,

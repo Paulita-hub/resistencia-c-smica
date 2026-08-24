@@ -24,7 +24,9 @@ class InstructionBubble extends PositionComponent
   }
 
   Future<void> _loadSprite() async {
-    sprite =
+    final n = game.level.number;
+    sprite = await game.trySprite('items/vineta_nivel$n.png');
+    sprite ??=
         await game.trySprite('items/vinetadelpersonaje.png') ??
         await game.trySprite('items/viñetadelpersonaje.png');
     _fitToPlayer();

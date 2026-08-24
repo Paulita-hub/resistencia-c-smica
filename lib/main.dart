@@ -24,8 +24,8 @@ import 'src/games_services/games_services.dart';
 import 'src/games_services/score.dart';
 import 'src/in_app_purchase/in_app_purchase.dart';
 import 'src/level_selection/character_select_screen.dart';
-import 'src/level_selection/level_selection_screen.dart';
 import 'src/level_selection/levels.dart';
+import 'src/level_selection/play_menu_screen.dart';
 import 'src/main_menu/main_menu_screen.dart';
 import 'src/play_session/play_session_screen.dart';
 import 'src/player_progress/persistence/local_storage_player_progress_persistence.dart';
@@ -81,11 +81,18 @@ Future<void> main() async {
   // }
 
   _log.info('Going full screen');
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Color(0x00000000),
+      systemNavigationBarColor: Color(0x00000000),
+      systemNavigationBarDividerColor: Color(0x00000000),
+    ),
+  );
 
   // TODO: When ready, uncomment the following lines to enable integrations.
   //       Read the README for more info on each integration.
@@ -141,19 +148,23 @@ class MyApp extends StatelessWidget {
             path: 'play',
             pageBuilder: (context, state) => buildMyTransition<void>(
               key: ValueKey('play'),
-              child: const CharacterSelectScreen(key: Key('level selection')),
+              child: const PlayMenuScreen(key: Key('play menu')),
               color: context.watch<Palette>().backgroundLevelSelection,
             ),
             routes: [
               GoRoute(
-                path: 'levels',
+                path: 'characters',
                 pageBuilder: (context, state) => buildMyTransition<void>(
-                  key: const ValueKey('levels'),
-                  child: const LevelSelectionScreen(
+                  key: const ValueKey('characters'),
+                  child: const CharacterSelectScreen(
                     key: Key('level selection'),
                   ),
                   color: context.watch<Palette>().backgroundLevelSelection,
                 ),
+              ),
+              GoRoute(
+                path: 'levels',
+                redirect: (context, state) => '/play',
               ),
               GoRoute(
                 path: 'session/:level',
@@ -163,7 +174,7 @@ class MyApp extends StatelessWidget {
                     (e) => e.number == levelNumber,
                   );
                   return buildMyTransition<void>(
-                    key: ValueKey('level'),
+                    key: ValueKey('level-$levelNumber'),
                     child: PlaySessionScreen(
                       level,
                       key: const Key('play session'),
@@ -280,6 +291,7 @@ class MyApp extends StatelessWidget {
 
             return MaterialApp.router(
               title: 'Resistencia Cósmica',
+              debugShowCheckedModeBanner: false,
               theme: ThemeData.from(
                 colorScheme: ColorScheme.fromSeed(
                   seedColor: palette.darkPen,
@@ -288,6 +300,43 @@ class MyApp extends StatelessWidget {
                 ),
                 textTheme: TextTheme(bodyMedium: TextStyle(color: palette.ink)),
               ),
+              builder: (context, child) {
+                final media = MediaQuery.of(context);
+                final clamped = media.copyWith(
+                  textScaler: media.textScaler.clamp(maxScaleFactor: 1.15),
+                );
+                Widget content = MediaQuery(
+                  data: clamped,
+                  child: child ?? const SizedBox.shrink(),
+                );
+                if (clamped.size.height > clamped.size.width + 24) {
+                  content = Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      content,
+                      const ColoredBox(
+                        color: Color(0xFF07020F),
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text(
+                              'Poné el celular de costado\npara jugar',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Color(0xFFFFFFFF),
+                                fontFamily: 'Permanent Marker',
+                                fontSize: 28,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return content;
+              },
               routeInformationProvider: _router.routeInformationProvider,
               routeInformationParser: _router.routeInformationParser,
               routerDelegate: _router.routerDelegate,
