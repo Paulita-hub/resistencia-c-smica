@@ -16,92 +16,101 @@ import 'settings.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  static const _gap = SizedBox(height: 60);
-
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsController>();
     final palette = context.watch<Palette>();
+    final compact = MediaQuery.sizeOf(context).height < 500;
+    final titleSize = compact ? 32.0 : 55.0;
+    final lineSize = compact ? 22.0 : 30.0;
+    final gap = SizedBox(height: compact ? 16 : 60);
 
     return Scaffold(
       backgroundColor: palette.backgroundSettings,
-      body: ResponsiveScreen(
-        squarishMainArea: ListView(
-          children: [
-            _gap,
-            const Text(
-              'Settings',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Permanent Marker',
-                fontSize: 55,
-                height: 1,
+      body: SafeArea(
+        child: ResponsiveScreen(
+          squarishMainArea: ListView(
+            children: [
+              gap,
+              Text(
+                'Ajustes',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Permanent Marker',
+                  fontSize: titleSize,
+                  height: 1,
+                ),
               ),
-            ),
-            _gap,
-            const _NameChangeLine('Name'),
-            ValueListenableBuilder<bool>(
-              valueListenable: settings.soundsOn,
-              builder: (context, soundsOn, child) => _SettingsLine(
-                'Sound FX',
-                Icon(soundsOn ? Icons.graphic_eq : Icons.volume_off),
-                onSelected: () => settings.toggleSoundsOn(),
+              gap,
+              _NameChangeLine('Nombre', fontSize: lineSize),
+              ValueListenableBuilder<bool>(
+                valueListenable: settings.soundsOn,
+                builder: (context, soundsOn, child) => _SettingsLine(
+                  'Sonido',
+                  Icon(soundsOn ? Icons.graphic_eq : Icons.volume_off),
+                  fontSize: lineSize,
+                  onSelected: () => settings.toggleSoundsOn(),
+                ),
               ),
-            ),
-            ValueListenableBuilder<bool>(
-              valueListenable: settings.musicOn,
-              builder: (context, musicOn, child) => _SettingsLine(
-                'Music',
-                Icon(musicOn ? Icons.music_note : Icons.music_off),
-                onSelected: () => settings.toggleMusicOn(),
+              ValueListenableBuilder<bool>(
+                valueListenable: settings.musicOn,
+                builder: (context, musicOn, child) => _SettingsLine(
+                  'Music',
+                  Icon(musicOn ? Icons.music_note : Icons.music_off),
+                  fontSize: lineSize,
+                  onSelected: () => settings.toggleMusicOn(),
+                ),
               ),
-            ),
-            Consumer<InAppPurchaseController?>(
-              builder: (context, inAppPurchase, child) {
-                if (inAppPurchase == null) {
-                  // In-app purchases are not supported yet.
-                  // Go to lib/main.dart and uncomment the lines that create
-                  // the InAppPurchaseController.
-                  return const SizedBox.shrink();
-                }
+              Consumer<InAppPurchaseController?>(
+                builder: (context, inAppPurchase, child) {
+                  if (inAppPurchase == null) {
+                    return const SizedBox.shrink();
+                  }
 
-                Widget icon;
-                VoidCallback? callback;
-                if (inAppPurchase.adRemoval.active) {
-                  icon = const Icon(Icons.check);
-                } else if (inAppPurchase.adRemoval.pending) {
-                  icon = const CircularProgressIndicator();
-                } else {
-                  icon = const Icon(Icons.ad_units);
-                  callback = () {
-                    inAppPurchase.buy();
-                  };
-                }
-                return _SettingsLine('Remove ads', icon, onSelected: callback);
-              },
-            ),
-            _SettingsLine(
-              'Reset progress',
-              const Icon(Icons.delete),
-              onSelected: () {
-                context.read<PlayerProgress>().reset();
+                  Widget icon;
+                  VoidCallback? callback;
+                  if (inAppPurchase.adRemoval.active) {
+                    icon = const Icon(Icons.check);
+                  } else if (inAppPurchase.adRemoval.pending) {
+                    icon = const CircularProgressIndicator();
+                  } else {
+                    icon = const Icon(Icons.ad_units);
+                    callback = () {
+                      inAppPurchase.buy();
+                    };
+                  }
+                  return _SettingsLine(
+                    'Quitar anuncios',
+                    icon,
+                    fontSize: lineSize,
+                    onSelected: callback,
+                  );
+                },
+              ),
+              _SettingsLine(
+                'Reiniciar progreso',
+                const Icon(Icons.delete),
+                fontSize: lineSize,
+                onSelected: () {
+                  context.read<PlayerProgress>().reset();
 
-                final messenger = ScaffoldMessenger.of(context);
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Player progress has been reset.'),
-                  ),
-                );
-              },
-            ),
-            _gap,
-          ],
-        ),
-        rectangularMenuArea: FilledButton(
-          onPressed: () {
-            GoRouter.of(context).pop();
-          },
-          child: const Text('Back'),
+                  final messenger = ScaffoldMessenger.of(context);
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Se reinició el progreso.'),
+                    ),
+                  );
+                },
+              ),
+              gap,
+            ],
+          ),
+          rectangularMenuArea: FilledButton(
+            onPressed: () {
+              GoRouter.of(context).pop();
+            },
+            child: const Text('Back'),
+          ),
         ),
       ),
     );
@@ -109,9 +118,10 @@ class SettingsScreen extends StatelessWidget {
 }
 
 class _NameChangeLine extends StatelessWidget {
-  final String title;
+  const _NameChangeLine(this.title, {required this.fontSize});
 
-  const _NameChangeLine(this.title);
+  final String title;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -127,9 +137,9 @@ class _NameChangeLine extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Permanent Marker',
-                fontSize: 30,
+                fontSize: fontSize,
               ),
             ),
             const Spacer(),
@@ -137,9 +147,9 @@ class _NameChangeLine extends StatelessWidget {
               valueListenable: settings.playerName,
               builder: (context, name, child) => Text(
                 '‘$name’',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Permanent Marker',
-                  fontSize: 30,
+                  fontSize: fontSize,
                 ),
               ),
             ),
@@ -151,13 +161,17 @@ class _NameChangeLine extends StatelessWidget {
 }
 
 class _SettingsLine extends StatelessWidget {
+  const _SettingsLine(
+    this.title,
+    this.icon, {
+    required this.fontSize,
+    this.onSelected,
+  });
+
   final String title;
-
   final Widget icon;
-
+  final double fontSize;
   final VoidCallback? onSelected;
-
-  const _SettingsLine(this.title, this.icon, {this.onSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +179,7 @@ class _SettingsLine extends StatelessWidget {
       highlightShape: BoxShape.rectangle,
       onTap: onSelected,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
@@ -174,9 +188,9 @@ class _SettingsLine extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Permanent Marker',
-                  fontSize: 30,
+                  fontSize: fontSize,
                 ),
               ),
             ),

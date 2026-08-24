@@ -21,7 +21,7 @@ class LevelBackground extends SpriteComponent
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    _cover(size);
+    _cover(game.size);
   }
 
   void _cover(Vector2 screen) {

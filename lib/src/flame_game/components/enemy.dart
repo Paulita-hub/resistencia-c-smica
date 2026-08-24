@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
+import '../game_layout.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
 import 'solid_block.dart';
@@ -12,11 +13,11 @@ class Enemy extends PositionComponent
   Enemy({required Vector2 position})
     : super(
         position: position,
-        size: Vector2(48, 40),
+        size: Vector2(GameLayout.tileSize, GameLayout.tileSize * 0.85),
         anchor: Anchor.bottomLeft,
       );
 
-  static const speed = 70.0;
+  static const speed = 140.0;
   double direction = 1;
   bool stomped = false;
   Sprite? sprite;

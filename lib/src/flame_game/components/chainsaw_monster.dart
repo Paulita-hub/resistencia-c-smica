@@ -63,7 +63,7 @@ class ChainsawMonster extends PositionComponent
     final sprite = _sprite;
     if (sprite == null) return;
     final src = sprite.srcSize;
-    const h = 108.0;
+    const h = 200.0;
     size = Vector2(h * src.x / src.y, h);
   }
 
@@ -134,7 +134,7 @@ class ChainsawMonster extends PositionComponent
   void _placeInView() {
     final zoom = game.camera.viewfinder.zoom;
     if (zoom <= 0 || zoom.isNaN) return;
-    final viewW = game.size.x / zoom;
+    final viewW = game.viewWidth / zoom;
     final camX = game.camera.viewfinder.position.x;
     final t = _bob;
     position.x = camX + viewW * 0.74 + sin(t * 0.9) * 16;
@@ -164,7 +164,7 @@ class ChainsawMonster extends PositionComponent
       p.position.x + p.size.x * 0.4,
       p.position.y - p.size.y * 0.5,
     );
-    if (_distanceToSegment(muzzleVector, aim, chest) < 22) {
+    if (_distanceToSegment(muzzleVector, aim, chest) < 44) {
       _hitThisPulse = true;
       game.laserHitPlayer();
     }

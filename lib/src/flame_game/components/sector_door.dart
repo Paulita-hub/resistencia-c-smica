@@ -16,7 +16,7 @@ class SectorDoor extends PositionComponent
     required this.color,
   }) : super(
          position: position,
-         size: Vector2(96, 128),
+         size: Vector2(180, 240),
          anchor: Anchor.bottomCenter,
          priority: 8,
        );
@@ -54,7 +54,7 @@ class SectorDoor extends PositionComponent
     }
     if (sprite != null) {
       final src = sprite!.srcSize;
-      size = Vector2(110, 110 * src.y / src.x);
+      size = Vector2(200, 200 * src.y / src.x);
     }
   }
 

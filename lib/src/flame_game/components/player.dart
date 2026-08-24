@@ -6,6 +6,7 @@ import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
 
 import '../../audio/sounds.dart';
+import '../game_layout.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
 import 'chainsaw_monster.dart';
@@ -22,14 +23,14 @@ class Player extends PositionComponent
   Player({required Vector2 position})
     : super(
         position: position,
-        size: Vector2(48, 64),
+        size: Vector2(GameLayout.playerWidth, 64),
         anchor: Anchor.bottomLeft,
         priority: 20,
       );
 
-  static const gravity = 1800.0;
-  static const jumpSpeed = -760.0;
-  static const moveSpeed = 230.0;
+  static const gravity = GameLayout.gravity;
+  static const jumpSpeed = GameLayout.jumpSpeed;
+  static const moveSpeed = GameLayout.moveSpeed;
 
   final velocity = Vector2.zero();
   bool onGround = false;
@@ -103,7 +104,7 @@ class Player extends PositionComponent
         fall;
     if (body != null) {
       final src = body.srcSize;
-      const w = 52.0;
+      const w = GameLayout.playerWidth;
       size = Vector2(w, (w * src.y / src.x).roundToDouble());
     }
   }
@@ -232,7 +233,7 @@ class Player extends PositionComponent
       if (position.y > game.mapSize.y - 6) {
         game.fallOffMap();
       }
-    } else if (position.y > game.spawnPoint.y + 70) {
+    } else if (position.y > game.spawnPoint.y + GameLayout.tileSize * 1.5) {
       game.hurtPlayer();
     }
   }
@@ -262,7 +263,7 @@ class Player extends PositionComponent
       if (_hypnoT - _hypnoLandedAt >= 1.35) {
         game.onHypnotizedFinished();
       }
-    } else if (position.y > game.spawnPoint.y + 80) {
+    } else if (position.y > game.spawnPoint.y + GameLayout.tileSize * 1.7) {
       game.onHypnotizedFinished();
     }
   }
@@ -285,7 +286,7 @@ class Player extends PositionComponent
 
       if (!block.platform && inHole) continue;
 
-      if (block.platform) {
+      if (block.platform && block.oneWay) {
         if (horizontal) continue;
         if (velocity.y <= 0) continue;
         final prevY = position.y - velocity.y * dt;
@@ -394,10 +395,7 @@ class Player extends PositionComponent
         destH = size.y;
         destW = destH * src.x / src.y;
         destY = size.y - destH;
-        const muzzleX = 301.0;
-        const muzzleY = 97.0;
-        final scale = destH / src.y;
-        laserFrom = Offset(destX + muzzleX * scale, destY + muzzleY * scale);
+        laserFrom = _aerosolMuzzle(src, destX, destY, destW, destH);
         for (final monster in game.world.children.whereType<ChainsawMonster>()) {
           if (!monster.appeared || monster.dying) continue;
           laserTo = Offset(
@@ -449,6 +447,32 @@ class Player extends PositionComponent
     );
   }
 
+  Offset _aerosolMuzzle(
+    Vector2 src,
+    double destX,
+    double destY,
+    double destW,
+    double destH,
+  ) {
+    // Boquilla del aerosol en cada frame de ataque (píxeles del PNG).
+    final w = src.x.round();
+    final h = src.y.round();
+    final Offset srcPt;
+    if (w == 319 && h == 306) {
+      srcPt = const Offset(301, 61);
+    } else if (w == 276 && h == 277) {
+      srcPt = const Offset(271, 97);
+    } else if (w == 249 && h == 400) {
+      srcPt = const Offset(243, 63);
+    } else {
+      srcPt = Offset(src.x * 0.96, src.y * 0.22);
+    }
+    return Offset(
+      destX + srcPt.dx / src.x * destW,
+      destY + srcPt.dy / src.y * destH,
+    );
+  }
+
   void _drawAerosolStain(Canvas canvas, Offset from, Offset to) {
     final dx = to.dx - from.dx;
     final dy = to.dy - from.dy;
@@ -484,26 +508,20 @@ class Player extends PositionComponent
 
     if (sprayFrames.isNotEmpty) {
       final frame = sprayFrames[(flow / 0.09).floor() % sprayFrames.length];
-      for (var k = 0; k < 5; k++) {
-        final f = 0.12 + k * 0.18;
-        final wobble = sin(flow * 18 + k * 1.7) * (6 + k * 3);
-        final cx = from.dx + dx * f + px * wobble;
-        final cy = from.dy + dy * f + py * wobble;
-        final cloud = 22.0 + k * 16;
-        canvas.save();
-        canvas.translate(cx, cy);
-        canvas.rotate(atan2(uy, ux));
-        frame.render(
-          canvas,
-          position: Vector2(-cloud * 0.15, -cloud * 0.45),
-          size: Vector2(cloud * 1.35, cloud),
-          overridePaint: Paint()
-            ..filterQuality = FilterQuality.none
-            ..isAntiAlias = false
-            ..color = Color.fromRGBO(255, 255, 255, 0.55 + k * 0.08),
-        );
-        canvas.restore();
-      }
+      final cloudW = min(72.0, 28.0 + len * 0.18);
+      final cloudL = min(len * 0.7, 96.0);
+      canvas.save();
+      canvas.translate(from.dx, from.dy);
+      canvas.rotate(atan2(uy, ux) - atan2(-0.35, 1.0));
+      frame.render(
+        canvas,
+        position: Vector2(2, -cloudW * 0.42),
+        size: Vector2(cloudL, cloudW),
+        overridePaint: Paint()
+          ..filterQuality = FilterQuality.none
+          ..isAntiAlias = false,
+      );
+      canvas.restore();
     }
 
     // Gotas de spray (pixeles), más dispersas cuanto más lejos.

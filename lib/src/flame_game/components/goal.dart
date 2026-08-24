@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
+import '../game_layout.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
 
@@ -11,7 +12,7 @@ class Goal extends PositionComponent
   Goal({required Vector2 position})
     : super(
         position: position,
-        size: Vector2(48, 96),
+        size: Vector2(GameLayout.tileSize, GameLayout.tileSize * 2),
         anchor: Anchor.bottomCenter,
       );
 
@@ -24,7 +25,7 @@ class Goal extends PositionComponent
           await game.trySprite('items/libra_corp.png');
       if (sprite != null) {
         final src = sprite!.srcSize;
-        size = Vector2(78, 78 * src.y / src.x);
+        size = Vector2(140, 140 * src.y / src.x);
       }
     } else {
       sprite = await game.trySprite('items/goal.png');

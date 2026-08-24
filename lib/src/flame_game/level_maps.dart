@@ -1,12 +1,14 @@
 import 'package:flame/components.dart';
 
+import 'game_layout.dart';
+
 /// Mapas de tiles.
 ///
 /// `.` vacío  `X` suelo  `H` hueco (piso roto)  `=` plataforma  `P` jugadora
 /// `C` objeto para comer  `W` puerta incorrecta  `D` puerta correcta
 /// `A` computadora  `T` computadora tirada  `E` enemigo  `G` meta
 class LevelMaps {
-  static const tileSize = 48.0;
+  static const tileSize = GameLayout.tileSize;
 
   /// El piso (ground / broken) ocupa este porcentaje de la altura de pantalla.
   static const floorScreenFraction = 0.25;
@@ -59,6 +61,7 @@ class LevelMaps {
     '.......C.......C.......C.......C........',
     '.......=.......=.......=.......=........',
     '......==......==......==......==........',
+    '........................................',
     'P.........W.................D...........',
     'XXXXXXHHXXXXXXHHXXXXXXHHXXXXXXHHXXXXXXXX',
   ];

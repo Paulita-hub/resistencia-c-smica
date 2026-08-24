@@ -17,9 +17,9 @@ class GameHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).height < 520;
-    final energyH = compact ? 32.0 : 44.0;
-    final iconH = compact ? 32.0 : 40.0;
+    final shortest = MediaQuery.sizeOf(context).shortestSide;
+    final energyH = (shortest * 0.05).clamp(24.0, 36.0);
+    final iconH = (shortest * 0.1).clamp(52.0, 80.0);
 
     return SafeArea(
       child: ValueListenableBuilder<int>(
@@ -30,7 +30,7 @@ class GameHud extends StatelessWidget {
             children: [
               const SizedBox.expand(),
               Positioned(
-                top: compact ? 4 : 8,
+                top: 8,
                 left: 0,
                 right: 0,
                 height: energyH,
@@ -85,7 +85,7 @@ class GameHud extends StatelessWidget {
               if (game.hint.isNotEmpty)
                 Positioned(
                   right: 16,
-                  top: (compact ? 4 : 8) + energyH + 6,
+                  top: 8 + energyH + 8,
                   left: 16,
                   child: Text(
                     game.hint,
@@ -93,7 +93,7 @@ class GameHud extends StatelessWidget {
                     style: const TextStyle(
                       color: Colors.white,
                       fontFamily: 'Permanent Marker',
-                      fontSize: 13,
+                      fontSize: 18,
                       shadows: [Shadow(blurRadius: 6, color: Colors.black)],
                     ),
                   ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../style/letterbox.dart';
+
 /// Imagen de resultado a pantalla completa, con zonas táctiles
 /// alineadas a los botones del arte (794×496).
 class ResultArtOverlay extends StatelessWidget {
@@ -16,33 +18,38 @@ class ResultArtOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              art,
-              fit: BoxFit.fill,
-              filterQuality: FilterQuality.none,
-              gaplessPlayback: true,
-            ),
-            for (final spot in hotspots)
+    return ColoredBox(
+      color: Colors.black,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final frame = LetterboxFrame.of(constraints.biggest, designSize);
+          return Stack(
+            clipBehavior: Clip.hardEdge,
+            children: [
               Positioned(
-                left: spot.design.left / designSize.width * w,
-                top: spot.design.top / designSize.height * h,
-                width: spot.design.width / designSize.width * w,
-                height: spot.design.height / designSize.height * h,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: spot.onPressed,
+                left: frame.offset.dx,
+                top: frame.offset.dy,
+                width: frame.drawn.width,
+                height: frame.drawn.height,
+                child: Image.asset(
+                  art,
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.none,
+                  gaplessPlayback: true,
                 ),
               ),
-          ],
-        );
-      },
+              for (final spot in hotspots)
+                Positioned.fromRect(
+                  rect: frame.map(spot.design),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: spot.onPressed,
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -60,7 +67,7 @@ class ResultHotspot {
 abstract final class ResultButtons {
   static const retryWin = Rect.fromLTWH(292, 368, 72, 74);
   static const exitWin = Rect.fromLTWH(448, 368, 73, 74);
-  static const nextWin = Rect.fromLTWH(614, 366, 55, 74);
+  static const nextWin = Rect.fromLTWH(610, 360, 70, 80);
 
   static const retryLose = Rect.fromLTWH(296, 364, 72, 74);
   static const exitLose = Rect.fromLTWH(450, 366, 73, 74);
