@@ -13,7 +13,7 @@ class MainMenuScreen extends StatelessWidget {
 
   static const _design = Size(1024, 572);
   static const _buttonSize = Size(200, 74);
-  static const _buttonTop = 465.0;
+  static const _buttonTop = 407.0;
 
   @override
   Widget build(BuildContext context) {

@@ -25,6 +25,8 @@ class MedialunaFlash extends PositionComponent
   @override
   Future<void> onLoad() async {
     destello = await game.trySprite('items/destellomedialuna.png');
+    final w = GameLayout.coinWidthFor(game.level.number);
+    size = Vector2.all(w);
   }
 
   @override
@@ -45,7 +47,7 @@ class MedialunaFlash extends PositionComponent
     canvas.translate(size.x / 2, size.y / 2);
 
     if (destello != null) {
-      final flash = GameLayout.coinWidth * 1.6 * (1.0 + p * 1.4);
+      final flash = size.x * 1.6 * (1.0 + p * 1.4);
       destello!.render(
         canvas,
         position: Vector2(-flash / 2, -flash / 2),
@@ -58,7 +60,7 @@ class MedialunaFlash extends PositionComponent
 
     if (food != null) {
       final src = food!.srcSize;
-      final fw = GameLayout.coinWidth * (1 - p * 0.45);
+      final fw = size.x * (1 - p * 0.45);
       final fh = fw * src.y / src.x;
       food!.render(
         canvas,

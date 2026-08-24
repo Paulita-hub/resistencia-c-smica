@@ -63,7 +63,7 @@ class ChainsawMonster extends PositionComponent
     final sprite = _sprite;
     if (sprite == null) return;
     final src = sprite.srcSize;
-    const h = 200.0;
+    const h = 210.0;
     size = Vector2(h * src.x / src.y, h);
   }
 

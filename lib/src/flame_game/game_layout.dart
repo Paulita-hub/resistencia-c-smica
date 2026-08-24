@@ -17,8 +17,13 @@ class GameLayout {
   /// ~15–20% del lado corto (1080) una vez encajado el mapa.
   static const playerWidth = 128.0;
 
-  /// Collectible bien visible (mínimo ~64 px en pantalla).
-  static const coinWidth = 88.0;
+  /// El nivel 2 hace más zoom (mapa más bajo); se achica para verse como el 1.
+  static double playerWidthFor(int level) => level == 2 ? 96.0 : playerWidth;
+
+  /// Collectible. Mismo tamaño en todos los niveles.
+  static const coinWidth = 48.0;
+
+  static double coinWidthFor(int level) => coinWidth;
 
   /// Grosor mínimo de plataforma (si el PNG es una tira fina).
   static const platformMinHeight = 44.0;
@@ -26,8 +31,8 @@ class GameLayout {
   /// Joystick y acciones: 9–12 mm en un celular 5–6", pulgares a los costados.
   static const joystick = 220.0;
   static const joystickKnob = 110.0;
-  static const jumpButton = 176.0;
-  static const attackButton = 160.0;
+  static const jumpButton = 248.0;
+  static const attackButton = 232.0;
 
   static const gravity = 3600.0;
   static const jumpSpeed = -1520.0;
