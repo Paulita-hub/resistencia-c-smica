@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../in_app_purchase/in_app_purchase.dart';
 import '../player_progress/player_progress.dart';
 import '../style/palette.dart';
+import '../style/pressable.dart';
 import '../style/responsive_screen.dart';
 import 'custom_name_dialog.dart';
 import 'settings.dart';
@@ -96,20 +97,18 @@ class SettingsScreen extends StatelessWidget {
 
                   final messenger = ScaffoldMessenger.of(context);
                   messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Se reinició el progreso.'),
-                    ),
+                    const SnackBar(content: Text('Se reinició el progreso.')),
                   );
                 },
               ),
               gap,
             ],
           ),
-          rectangularMenuArea: FilledButton(
-            onPressed: () {
-              GoRouter.of(context).pop();
-            },
-            child: const Text('Back'),
+          rectangularMenuArea: Pressable(
+            onPressed: () => GoRouter.of(context).pop(),
+            child: IgnorePointer(
+              child: FilledButton(onPressed: () {}, child: const Text('Back')),
+            ),
           ),
         ),
       ),
@@ -127,9 +126,8 @@ class _NameChangeLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsController>();
 
-    return InkResponse(
-      highlightShape: BoxShape.rectangle,
-      onTap: () => showCustomNameDialog(context),
+    return Pressable(
+      onPressed: () => showCustomNameDialog(context),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
@@ -175,9 +173,9 @@ class _SettingsLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkResponse(
-      highlightShape: BoxShape.rectangle,
-      onTap: onSelected,
+    return Pressable(
+      enabled: onSelected != null,
+      onPressed: onSelected,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(

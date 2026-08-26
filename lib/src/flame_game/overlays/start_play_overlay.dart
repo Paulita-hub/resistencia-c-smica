@@ -11,14 +11,11 @@ class StartPlayOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final h = MediaQuery.sizeOf(context).shortestSide;
-    return SafeArea(
-      child: Align(
-        alignment: const Alignment(0, 0.55),
-        child: JugarButton(
-          key: const Key('jugar'),
-          height: (h * 0.2).clamp(72.0, 120.0),
-          onPressed: game.beginRun,
-        ),
+    return Center(
+      child: JugarButton(
+        key: const Key('jugar'),
+        height: (h * 0.2).clamp(72.0, 120.0),
+        onPressed: game.beginRun,
       ),
     );
   }

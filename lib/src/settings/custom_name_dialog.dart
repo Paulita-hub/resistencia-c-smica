@@ -5,6 +5,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
+import '../style/pressable.dart';
 import 'settings.dart';
 
 void showCustomNameDialog(BuildContext context) {
@@ -53,9 +55,11 @@ class _CustomNameDialogState extends State<CustomNameDialog> {
               Navigator.pop(context);
             },
           ),
-          TextButton(
+          Pressable(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: IgnorePointer(
+              child: TextButton(onPressed: () {}, child: const Text('Close')),
+            ),
           ),
         ],
       ),

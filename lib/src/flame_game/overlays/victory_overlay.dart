@@ -30,6 +30,7 @@ class VictoryOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return ResultArtOverlay(
       art: _art[game.level.number] ?? _art[1]!,
+      captionBottom: 311,
       hotspots: [
         ResultHotspot(design: ResultButtons.retryWin, onPressed: onRetry),
         ResultHotspot(design: ResultButtons.exitWin, onPressed: onExit),

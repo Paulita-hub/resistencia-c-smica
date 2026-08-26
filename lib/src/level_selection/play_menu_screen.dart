@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../audio/audio_controller.dart';
-import '../audio/sounds.dart';
 import '../player_progress/player_progress.dart';
 import '../style/letterbox.dart';
 import '../style/palette.dart';
+import '../style/pressable.dart';
 
 class PlayMenuScreen extends StatelessWidget {
   const PlayMenuScreen({super.key});
@@ -19,7 +18,6 @@ class PlayMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
-    final audio = context.watch<AudioController>();
     final progress = context.watch<PlayerProgress>();
 
     return Scaffold(
@@ -36,7 +34,6 @@ class PlayMenuScreen extends StatelessWidget {
           final btnScale = (drawnH * 0.84) / 800;
 
           void tap(VoidCallback action) {
-            audio.playSfx(SfxType.buttonTap);
             action();
           }
 
@@ -93,10 +90,12 @@ class PlayMenuScreen extends StatelessWidget {
                               asset: 'assets/images/ui/btn_level_$level.png',
                               srcSize: const Size(403, 156),
                               scale: btnScale * 0.6,
-                              enabled: progress.highestLevelReached >= level - 1,
+                              enabled:
+                                  progress.highestLevelReached >= level - 1,
                               onPressed: () => tap(
-                                () => GoRouter.of(context)
-                                    .go('/play/session/$level'),
+                                () => GoRouter.of(
+                                  context,
+                                ).go('/play/session/$level'),
                               ),
                             ),
                             if (level < 3) SizedBox(height: 6 * btnScale * 0.6),
@@ -118,10 +117,9 @@ class PlayMenuScreen extends StatelessWidget {
                 ),
                 width: _backRect.width * scale,
                 height: _backRect.height * scale,
-                child: GestureDetector(
+                child: Pressable(
                   key: const Key('back'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => tap(() => GoRouter.of(context).go('/')),
+                  onPressed: () => tap(() => GoRouter.of(context).go('/')),
                   child: Image.asset(
                     'assets/images/ui/back_arrow.png',
                     fit: BoxFit.contain,
@@ -168,9 +166,6 @@ class _MenuButton extends StatelessWidget {
       ),
     );
     if (onPressed == null || !enabled) return child;
-    return GestureDetector(
-      onTap: onPressed,
-      child: child,
-    );
+    return Pressable(onPressed: onPressed, child: child);
   }
 }

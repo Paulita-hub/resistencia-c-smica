@@ -17,9 +17,13 @@ class SettingsController {
 
   ValueNotifier<String> playerName = ValueNotifier('Player');
 
-  ValueNotifier<bool> soundsOn = ValueNotifier(false);
+  ValueNotifier<bool> soundsOn = ValueNotifier(true);
 
-  ValueNotifier<bool> musicOn = ValueNotifier(false);
+  ValueNotifier<bool> musicOn = ValueNotifier(true);
+
+  ValueNotifier<double> soundsVolume = ValueNotifier(1);
+
+  ValueNotifier<double> musicVolume = ValueNotifier(1);
 
   /// Creates a new instance of [SettingsController] backed by [persistence].
   SettingsController({required SettingsPersistence persistence})
@@ -32,12 +36,18 @@ class SettingsController {
           // On the web, sound can only start after user interaction, so
           // we start muted there.
           // On any other platform, we start unmuted.
-          .getMuted(defaultValue: kIsWeb)
+          .getMuted(defaultValue: false)
           .then((value) => muted.value = value),
       _persistence.getSoundsOn().then((value) => soundsOn.value = value),
       _persistence.getMusicOn().then((value) => musicOn.value = value),
+      _persistence.getSoundsVolume().then(
+        (value) => soundsVolume.value = value,
+      ),
+      _persistence.getMusicVolume().then((value) => musicVolume.value = value),
       _persistence.getPlayerName().then((value) => playerName.value = value),
     ]);
+    soundsOn.value = soundsVolume.value > 0.02;
+    musicOn.value = musicVolume.value > 0.02;
   }
 
   void setPlayerName(String name) {
@@ -45,9 +55,14 @@ class SettingsController {
     _persistence.savePlayerName(playerName.value);
   }
 
+  void unmute() {
+    if (!muted.value) return;
+    muted.value = false;
+    _persistence.saveMuted(false);
+  }
+
   void toggleMusicOn() {
-    musicOn.value = !musicOn.value;
-    _persistence.saveMusicOn(musicOn.value);
+    setMusicVolume(musicOn.value ? 0 : 1);
   }
 
   void toggleMuted() {
@@ -56,7 +71,30 @@ class SettingsController {
   }
 
   void toggleSoundsOn() {
-    soundsOn.value = !soundsOn.value;
-    _persistence.saveSoundsOn(soundsOn.value);
+    setSoundsVolume(soundsOn.value ? 0 : 1);
+  }
+
+  void setMusicVolume(double value) {
+    final v = value.clamp(0.0, 1.0);
+    musicVolume.value = v;
+    final on = v > 0.02;
+    if (musicOn.value != on) {
+      musicOn.value = on;
+      _persistence.saveMusicOn(on);
+    }
+    if (on) unmute();
+    _persistence.saveMusicVolume(v);
+  }
+
+  void setSoundsVolume(double value) {
+    final v = value.clamp(0.0, 1.0);
+    soundsVolume.value = v;
+    final on = v > 0.02;
+    if (soundsOn.value != on) {
+      soundsOn.value = on;
+      _persistence.saveSoundsOn(on);
+    }
+    if (on) unmute();
+    _persistence.saveSoundsVolume(v);
   }
 }

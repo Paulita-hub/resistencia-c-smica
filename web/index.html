@@ -84,6 +84,15 @@
       text-align: center;
       pointer-events: none;
       box-shadow: 0 0 0 8px rgba(208, 8, 154, 0.28);
+      transition: transform 90ms ease-out, filter 90ms ease-out;
+    }
+    #rc-fs-gate:hover #rc-fs-play {
+      transform: scale(1.05);
+      filter: brightness(1.18);
+    }
+    #rc-fs-gate:active #rc-fs-play {
+      transform: scale(0.88) translateY(5px);
+      filter: brightness(1.45);
     }
     #rc-fs-label {
       font: 700 20px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -196,11 +205,42 @@
 
       let started = false;
 
+      function unlockAudio() {
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return;
+          const ctx = window.__rcAudioCtx || new Ctx();
+          window.__rcAudioCtx = ctx;
+          if (ctx.state === 'suspended') ctx.resume();
+          const buf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(ctx.destination);
+          src.start(0);
+        } catch (_) {}
+        const urls = [
+          'assets/assets/sfx/ui_button.mp3',
+          'assets/sfx/ui_button.mp3',
+        ];
+        for (let i = 0; i < urls.length; i++) {
+          try {
+            const click = new Audio(urls[i]);
+            click.volume = 1;
+            const played = click.play();
+            if (played && typeof played.catch === 'function') {
+              played.catch(function () {});
+            }
+            break;
+          } catch (_) {}
+        }
+      }
+
       function onPlayGesture(event) {
         event.preventDefault();
         event.stopPropagation();
         if (started) return;
         started = true;
+        unlockAudio();
         enterFullscreen();
         startPlaying();
       }

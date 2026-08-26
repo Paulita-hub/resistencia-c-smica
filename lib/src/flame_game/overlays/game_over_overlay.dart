@@ -26,6 +26,7 @@ class GameOverOverlay extends StatelessWidget {
     final level3 = game.level.number == 3;
     return ResultArtOverlay(
       art: _art[game.level.number] ?? _art[1]!,
+      captionBottom: level3 ? 319 : 297,
       hotspots: [
         ResultHotspot(
           design: level3 ? ResultButtons.retryLose3 : ResultButtons.retryLose,

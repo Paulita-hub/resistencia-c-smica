@@ -1,26 +1,31 @@
 import 'package:flutter/material.dart';
 
+import '../../style/pressable.dart';
 import '../resistencia_game.dart';
+import 'audio_mixer_panel.dart';
 import 'energy_bar.dart';
 
-class GameHud extends StatelessWidget {
-  const GameHud({
-    required this.game,
-    required this.onSettings,
-    required this.onPause,
-    super.key,
-  });
+class GameHud extends StatefulWidget {
+  const GameHud({required this.game, required this.onPause, super.key});
 
   final ResistenciaGame game;
-  final VoidCallback onSettings;
   final VoidCallback onPause;
 
   @override
+  State<GameHud> createState() => _GameHudState();
+}
+
+class _GameHudState extends State<GameHud> {
+  bool _audioOpen = false;
+
+  @override
   Widget build(BuildContext context) {
+    final game = widget.game;
     final shortest = MediaQuery.sizeOf(context).shortestSide;
     final energyH = (shortest * 0.05).clamp(24.0, 36.0);
     final iconH = (shortest * 0.1).clamp(52.0, 80.0);
     final plaqueH = game.level.number == 2 ? iconH * 0.8 : iconH;
+    final mixerIconH = plaqueH * 0.55;
 
     return SafeArea(
       child: ValueListenableBuilder<int>(
@@ -49,27 +54,38 @@ class GameHud extends StatelessWidget {
                 top: 8,
                 left: 0,
                 right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    _HudImageButton(
-                      asset: 'assets/images/hud/hud_settings.png',
-                      height: plaqueH,
-                      onPressed: onSettings,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _HudImageButton(
+                          asset: 'assets/images/hud/hud_settings.png',
+                          height: plaqueH,
+                          onPressed: () =>
+                              setState(() => _audioOpen = !_audioOpen),
+                        ),
+                        const SizedBox(width: 8),
+                        _LevelPlaque(level: game.level.number, height: plaqueH),
+                        const SizedBox(width: 8),
+                        _HudImageButton(
+                          asset: 'assets/images/hud/hud_pause.png',
+                          height: plaqueH,
+                          onPressed: () {
+                            setState(() => _audioOpen = false);
+                            widget.onPause();
+                          },
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    _LevelPlaque(
-                      level: game.level.number,
-                      height: plaqueH,
-                    ),
-                    const SizedBox(width: 8),
-                    _HudImageButton(
-                      asset: 'assets/images/hud/hud_pause.png',
-                      height: plaqueH,
-                      onPressed: onPause,
-                    ),
+                    if (_audioOpen) ...[
+                      SizedBox(height: plaqueH * 0.14),
+                      AudioMixerPanel(iconHeight: mixerIconH),
+                    ],
                   ],
                 ),
               ),
@@ -121,8 +137,8 @@ class _HudImageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
+    return Pressable(
+      onPressed: onPressed,
       child: Image.asset(
         asset,
         height: height,

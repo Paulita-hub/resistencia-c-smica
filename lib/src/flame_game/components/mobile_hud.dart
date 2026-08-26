@@ -1,4 +1,7 @@
+import 'dart:async' as async;
+
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flame/input.dart';
 import 'package:flutter/widgets.dart';
 
@@ -58,10 +61,7 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
           size: Vector2.all(joyBg),
           paint: _joystickPaint(),
         ),
-        margin: EdgeInsets.only(
-          left: 36 + safe.left,
-          bottom: 40 + safe.bottom,
-        ),
+        margin: EdgeInsets.only(left: 36 + safe.left, bottom: 40 + safe.bottom),
         priority: _hudPriority,
       );
     }
@@ -70,10 +70,7 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
       sprite: jumpSprite,
       label: 'Saltar',
       size: jumpSize,
-      margin: EdgeInsets.only(
-        right: 28 + safe.right,
-        bottom: 36 + safe.bottom,
-      ),
+      margin: EdgeInsets.only(right: 28 + safe.right, bottom: 36 + safe.bottom),
       onPressed: () => game.input.hudJump = true,
       onReleased: () => game.input.hudJump = false,
     );
@@ -123,10 +120,26 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
     return Paint()
       ..filterQuality = FilterQuality.none
       ..colorFilter = const ColorFilter.matrix(<double>[
-        1, 0, 0, 0, 18,
-        0, 1, 0, 0, 18,
-        0, 0, 1, 0, 18,
-        0, 0, 0, 2.8, 0,
+        1,
+        0,
+        0,
+        0,
+        18,
+        0,
+        1,
+        0,
+        0,
+        18,
+        0,
+        0,
+        1,
+        0,
+        18,
+        0,
+        0,
+        0,
+        2.8,
+        0,
       ]);
   }
 
@@ -141,37 +154,16 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
     final buttonSize = Vector2.all(size);
     final downSize = buttonSize * 0.86;
     final downOffset = (buttonSize - downSize) / 2 + Vector2(0, size * 0.05);
-    return HudButtonComponent(
+    return _StickyHudButton(
       button: SpriteComponent(sprite: sprite, size: buttonSize),
-      buttonDown: PositionComponent(
-        size: buttonSize,
-        children: [
-          CircleComponent(
-            radius: size * 0.5,
-            position: buttonSize / 2,
-            anchor: Anchor.center,
-            paint: Paint()..color = const Color(0x66FFFFFF),
-          ),
-          SpriteComponent(
-            sprite: sprite,
-            size: downSize,
-            position: downOffset,
-            paint: Paint()
-              ..colorFilter = const ColorFilter.mode(
-                Color(0x88FFFFFF),
-                BlendMode.srcATop,
-              ),
-          ),
-        ],
+      buttonDown: SpriteComponent(
+        sprite: sprite,
+        size: downSize,
+        position: downOffset,
       ),
       margin: margin,
-      onPressed: onPressed,
-      onReleased: () {
-        onReleased?.call();
-      },
-      onCancelled: () {
-        onReleased?.call();
-      },
+      pressed: onPressed,
+      released: onReleased,
       priority: _hudPriority,
       children: [
         TextComponent(
@@ -183,9 +175,7 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
               color: Color(0xFFFFFFFF),
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              shadows: [
-                Shadow(color: Color(0xCC000000), blurRadius: 4),
-              ],
+              shadows: [Shadow(color: Color(0xCC000000), blurRadius: 4)],
             ),
           ),
         ),
@@ -209,6 +199,47 @@ class MobileHud extends Component with HasGameReference<ResistenciaGame> {
     jumpButton.removeFromParent();
     attackButton?.removeFromParent();
     useButton?.removeFromParent();
+    super.onRemove();
+  }
+}
+
+/// Mantiene el sprite hundido un rato: en el celular el tap es demasiado corto.
+class _StickyHudButton extends HudButtonComponent {
+  _StickyHudButton({
+    required super.button,
+    required super.buttonDown,
+    required super.margin,
+    required this.pressed,
+    this.released,
+    super.priority,
+    super.children,
+  }) : super(onPressed: pressed, onReleased: null, onCancelled: null);
+
+  final void Function() pressed;
+  final void Function()? released;
+  async.Timer? _visualUp;
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    released?.call();
+    _visualUp?.cancel();
+    _visualUp = async.Timer(const Duration(milliseconds: 220), () {
+      if (isMounted) super.onTapUp(event);
+    });
+  }
+
+  @override
+  void onTapCancel(TapCancelEvent event) {
+    released?.call();
+    _visualUp?.cancel();
+    _visualUp = async.Timer(const Duration(milliseconds: 220), () {
+      if (isMounted) super.onTapCancel(event);
+    });
+  }
+
+  @override
+  void onRemove() {
+    _visualUp?.cancel();
     super.onRemove();
   }
 }

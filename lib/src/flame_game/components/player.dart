@@ -210,7 +210,6 @@ class Player extends PositionComponent
     if (jumpHeld && !_jumpWasHeld && onGround) {
       velocity.y = jumpSpeed;
       onGround = false;
-      game.audio.playSfx(SfxType.jump);
     }
     _jumpWasHeld = jumpHeld;
 

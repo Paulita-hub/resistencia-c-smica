@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
+import '../../audio/sounds.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
 
@@ -128,6 +129,7 @@ class ChainsawMonster extends PositionComponent
       _animT = 0;
       _hitThisPulse = false;
       _lockAim();
+      game.audio.playSfx(SfxType.monsterLaser);
     }
   }
 

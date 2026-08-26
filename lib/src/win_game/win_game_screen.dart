@@ -11,6 +11,7 @@ import '../ads/banner_ad_widget.dart';
 import '../games_services/score.dart';
 import '../in_app_purchase/in_app_purchase.dart';
 import '../style/palette.dart';
+import '../style/pressable.dart';
 import '../style/responsive_screen.dart';
 
 class WinGameScreen extends StatelessWidget {
@@ -56,11 +57,14 @@ class WinGameScreen extends StatelessWidget {
             ),
           ],
         ),
-        rectangularMenuArea: FilledButton(
-          onPressed: () {
-            GoRouter.of(context).go('/play');
-          },
-          child: const Text('Continue'),
+        rectangularMenuArea: Pressable(
+          onPressed: () => GoRouter.of(context).go('/play'),
+          child: IgnorePointer(
+            child: FilledButton(
+              onPressed: () {},
+              child: const Text('Continue'),
+            ),
+          ),
         ),
       ),
     );

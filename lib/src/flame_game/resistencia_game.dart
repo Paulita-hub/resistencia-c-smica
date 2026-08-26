@@ -19,7 +19,6 @@ import 'components/flying_monster.dart';
 import 'components/goal.dart';
 import 'components/ground_strip.dart';
 import 'components/hole_pit.dart';
-import 'components/instruction_bubble.dart';
 import 'components/level_background.dart';
 import 'components/mobile_hud.dart';
 import 'components/player.dart';
@@ -303,13 +302,12 @@ class ResistenciaGame extends FlameGame
     } else if (level.number == 3) {
       world.add(ChainsawMonster());
     }
-    world.add(InstructionBubble());
   }
 
   void collectCoin() {
     coins += 1;
     if (energy < energySlots) energy += 1;
-    audio.playSfx(SfxType.coin);
+    audio.playSfx(SfxType.eat);
     hint = level.number >= 2
         ? 'La medialuna recarga tu energía'
         : 'Ahora buscá la puerta correcta';
@@ -329,18 +327,22 @@ class ResistenciaGame extends FlameGame
   void tapAttack() {
     if (!started || finished || gameOver || !canAttack) return;
     player.flashAttack();
+    audio.playSfx(
+      level.number == 2 || level.number == 3
+          ? SfxType.laser
+          : SfxType.attack,
+    );
     if (!monsterReady) {
-      audio.playSfx(SfxType.buttonTap);
       return;
     }
     if (level.number == 3) {
       for (final monster in world.children.whereType<ChainsawMonster>()) {
         if (!monster.appeared || monster.dying) continue;
         monster.stun();
+        audio.playSfx(SfxType.defend);
       }
     }
     attackCharge++;
-    audio.playSfx(SfxType.buttonTap);
     if (attackCharge >= clicksPerHit) {
       attackCharge = 0;
       monsterEnergy = (monsterEnergy - 1).clamp(0, energySlots);
@@ -387,11 +389,11 @@ class ResistenciaGame extends FlameGame
     inBattle = false;
     energy = (energy - 1).clamp(0, energySlots);
     hud.value++;
-    audio.playSfx(SfxType.hurt);
     if (energy <= 0) {
       hypnotizePlayer();
       return;
     }
+    audio.playSfx(SfxType.defend);
     player.invulnerableTime = 0.55;
   }
 
@@ -400,11 +402,11 @@ class ResistenciaGame extends FlameGame
     if (player.invulnerableTime > 0) return;
     energy = (energy - 1).clamp(0, energySlots);
     hud.value++;
-    audio.playSfx(SfxType.hurt);
     if (energy <= 0) {
       fallOffMap();
       return;
     }
+    audio.playSfx(SfxType.defend);
     player.invulnerableTime = 0.8;
   }
 
@@ -457,7 +459,6 @@ class ResistenciaGame extends FlameGame
 
   void failLevel({String? message}) {
     if (gameOver) return;
-    final alreadyFinished = finished;
     gameOver = true;
     finished = true;
     hint = message ??
@@ -467,7 +468,7 @@ class ResistenciaGame extends FlameGame
             ? 'Caíste'
             : 'Te trabaste con una plataforma');
     hud.value++;
-    if (!alreadyFinished) audio.playSfx(SfxType.hurt);
+    audio.playSfx(SfxType.lose);
     _hideMobileHud();
     pauseEngine();
     overlays.add(gameOverOverlay);
@@ -481,14 +482,15 @@ class ResistenciaGame extends FlameGame
     if (finished || player.invulnerableTime > 0) return;
     lives -= 1;
     hud.value++;
-    audio.playSfx(SfxType.hurt);
     if (lives <= 0) {
+      audio.playSfx(SfxType.lose);
       gameOver = true;
       _hideMobileHud();
       pauseEngine();
       overlays.add(gameOverOverlay);
       return;
     }
+    audio.playSfx(SfxType.hurt);
     player.invulnerableTime = 1.4;
     player.position = spawnPoint.clone();
     player.velocity.setZero();
@@ -519,9 +521,6 @@ class ResistenciaGame extends FlameGame
   void beginRun() {
     if (started || gameOver) return;
     started = true;
-    world.children.whereType<InstructionBubble>().toList().forEach(
-      (bubble) => bubble.removeFromParent(),
-    );
     overlays.remove(playOverlay);
     _showMobileHud();
     hud.value++;

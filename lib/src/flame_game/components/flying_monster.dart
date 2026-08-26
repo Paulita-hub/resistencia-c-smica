@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../../audio/sounds.dart';
 import '../resistencia_game.dart';
 import '../sprite_loading.dart';
 
@@ -37,6 +38,7 @@ class FlyingMonster extends PositionComponent
   bool _attacking = false;
   double _alive = 0;
   bool _announced = false;
+  int _waveCycle = -1;
 
   bool get attacking => _attacking;
   bool get appeared => game.started && _alive >= appearDelay;
@@ -64,6 +66,7 @@ class FlyingMonster extends PositionComponent
     if (!game.started || game.finished || game.gameOver) {
       _attacking = false;
       _phaseT = 0;
+      _waveCycle = -1;
       if (!game.started) {
         _alive = 0;
         _announced = false;
@@ -76,6 +79,7 @@ class FlyingMonster extends PositionComponent
     if (!appeared) {
       _attacking = false;
       _phaseT = 0;
+      _waveCycle = -1;
       _layoutSprite();
       return;
     }
@@ -88,15 +92,23 @@ class FlyingMonster extends PositionComponent
     _phaseT += dt;
     if (_attacking) {
       _animT += dt;
+      final n = attackFrames.isEmpty ? 1 : attackFrames.length;
+      final cycle = (_animT / (0.16 * n)).floor();
+      if (cycle != _waveCycle) {
+        _waveCycle = cycle;
+        game.audio.playSfx(SfxType.hypnoWave);
+      }
       if (_phaseT >= 2.2) {
         game.resolveBattle();
         _attacking = false;
         _phaseT = 0;
+        _waveCycle = -1;
       }
     } else if (_phaseT >= 1.8) {
       _attacking = true;
       _phaseT = 0;
       _animT = 0;
+      _waveCycle = -1;
       game.beginBattle();
     }
     _layoutSprite();

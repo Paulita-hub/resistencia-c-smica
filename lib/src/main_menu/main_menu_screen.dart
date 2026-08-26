@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../audio/audio_controller.dart';
-import '../audio/sounds.dart';
 import '../style/jugar_button.dart';
 import '../style/letterbox.dart';
 import '../style/palette.dart';
+import '../style/pressable.dart';
 
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
@@ -18,7 +17,6 @@ class MainMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
-    final audioController = context.watch<AudioController>();
 
     return Scaffold(
       backgroundColor: palette.backgroundMain,
@@ -43,7 +41,8 @@ class MainMenuScreen extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: frame.offset.dx +
+                left:
+                    frame.offset.dx +
                     (_design.width - _buttonSize.width) / 2 * frame.scale,
                 top: frame.offset.dy + _buttonTop * frame.scale,
                 width: _buttonSize.width * frame.scale,
@@ -52,7 +51,6 @@ class MainMenuScreen extends StatelessWidget {
                   key: const Key('jugar'),
                   height: _buttonSize.height * frame.scale,
                   onPressed: () {
-                    audioController.playSfx(SfxType.buttonTap);
                     GoRouter.of(context).go('/play');
                   },
                 ),
@@ -60,12 +58,13 @@ class MainMenuScreen extends StatelessWidget {
               Positioned(
                 top: pad.top + 8,
                 right: pad.right + 8,
-                child: IconButton(
+                child: Pressable(
                   key: const Key('settings'),
-                  tooltip: 'Ajustes',
-                  color: Colors.white,
                   onPressed: () => GoRouter.of(context).push('/settings'),
-                  icon: const Icon(Icons.settings),
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Icon(Icons.settings, color: Colors.white, size: 28),
+                  ),
                 ),
               ),
             ],

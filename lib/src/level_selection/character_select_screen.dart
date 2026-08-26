@@ -8,6 +8,7 @@ import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
 import '../style/letterbox.dart';
 import '../style/palette.dart';
+import '../style/pressable.dart';
 
 class CharacterSelectScreen extends StatefulWidget {
   const CharacterSelectScreen({super.key});
@@ -24,20 +25,22 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
       front: 'assets/images/ui/card_luna.png',
       back: 'assets/images/ui/ficha_luna.png',
       rect: Rect.fromLTWH(120, 70, 244, 335),
+      elegirFrac: Rect.fromLTWH(0.7704, 0.8367, 0.2019, 0.1247),
     ),
     _CharacterCard(
       front: 'assets/images/ui/card_milo.png',
       back: 'assets/images/ui/ficha_milo.png',
       rect: Rect.fromLTWH(386, 70, 228, 335),
+      elegirFrac: Rect.fromLTWH(0.7774, 0.8222, 0.2022, 0.1270),
     ),
     _CharacterCard(
       front: 'assets/images/ui/card_xel.png',
       back: 'assets/images/ui/ficha_xel.png',
       rect: Rect.fromLTWH(636, 70, 238, 335),
+      elegirFrac: Rect.fromLTWH(0.7692, 0.8399, 0.2019, 0.1276),
     ),
   ];
   static const _detailSize = Size(832, 441);
-  static const _elegirFrac = Rect.fromLTWH(0.778, 0.836, 0.182, 0.078);
   static const _backRect = Rect.fromLTWH(16, 8, 64, 59);
 
   late final List<AnimationController> _flips;
@@ -72,8 +75,8 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
   }
 
   void _toggle(int index) {
-    context.read<AudioController>().playSfx(SfxType.buttonTap);
-    final open = _flips[index].status == AnimationStatus.forward ||
+    final open =
+        _flips[index].status == AnimationStatus.forward ||
         _flips[index].status == AnimationStatus.completed;
     if (open) {
       _flips[index].reverse();
@@ -98,12 +101,10 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
   }
 
   void _openLevels() {
-    context.read<AudioController>().playSfx(SfxType.buttonTap);
     GoRouter.of(context).go('/play');
   }
 
   void _goBack() {
-    context.read<AudioController>().playSfx(SfxType.buttonTap);
     GoRouter.of(context).go('/play');
   }
 
@@ -173,10 +174,9 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
                       ),
                   Positioned.fromRect(
                     rect: back,
-                    child: GestureDetector(
+                    child: Pressable(
                       key: const Key('back'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _goBack,
+                      onPressed: _goBack,
                       child: Image.asset(
                         'assets/images/ui/back_arrow.png',
                         fit: BoxFit.contain,
@@ -206,59 +206,84 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen>
     final showBack = t >= 0.5;
     final parallax = math.sin(angle) * 12;
     final elegir = Rect.fromLTWH(
-      rect.width * _elegirFrac.left,
-      rect.height * _elegirFrac.top,
-      rect.width * _elegirFrac.width,
-      rect.height * _elegirFrac.height,
+      rect.width * card.elegirFrac.left,
+      rect.height * card.elegirFrac.top,
+      rect.width * card.elegirFrac.width,
+      rect.height * card.elegirFrac.height,
     );
 
     return Positioned.fromRect(
       rect: rect,
-      child: GestureDetector(
+      child: Pressable(
         key: Key('character-${index + 1}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: t < 0.5 ? () => _toggle(index) : null,
-        child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Transform(
-                alignment: Alignment.center,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.0014)
-                  ..rotateY(angle),
-                child: showBack
-                    ? Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.identity()..rotateY(math.pi),
-                        child: Image.asset(
-                          card.back,
-                          fit: BoxFit.fill,
-                          filterQuality: FilterQuality.none,
-                          gaplessPlayback: true,
-                        ),
-                      )
-                    : Transform.translate(
-                        offset: Offset(parallax, 0),
-                        child: Image.asset(
-                          card.front,
-                          fit: BoxFit.fill,
-                          filterQuality: FilterQuality.none,
-                          gaplessPlayback: true,
-                        ),
+        enabled: t < 0.5,
+        onPressed: t < 0.5 ? () => _toggle(index) : null,
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, 0.0014)
+            ..rotateY(angle),
+          child: showBack
+              ? Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.identity()..rotateY(math.pi),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    clipBehavior: Clip.none,
+                    children: [
+                      Image.asset(
+                        card.back,
+                        fit: BoxFit.fill,
+                        filterQuality: FilterQuality.none,
+                        gaplessPlayback: true,
                       ),
-              ),
-              if (t > 0.85)
-                Positioned.fromRect(
-                  rect: elegir,
-                  child: GestureDetector(
-                    key: index == 0 ? const Key('empezar') : null,
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _openLevels,
+                      if (t > 0.85)
+                        Positioned.fromRect(
+                          rect: elegir,
+                          child: ColoredBox(
+                            color: const Color(0xFFFFFFFF),
+                            child: Pressable(
+                              key: index == 0 ? const Key('empezar') : null,
+                              onPressed: _openLevels,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(
+                                  elegir.height / 2,
+                                ),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Positioned(
+                                      left: -elegir.left,
+                                      top: -elegir.top,
+                                      width: rect.width,
+                                      height: rect.height,
+                                      child: Image.asset(
+                                        card.back,
+                                        fit: BoxFit.fill,
+                                        filterQuality: FilterQuality.none,
+                                        gaplessPlayback: true,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                )
+              : Transform.translate(
+                  offset: Offset(parallax, 0),
+                  child: Image.asset(
+                    card.front,
+                    fit: BoxFit.fill,
+                    filterQuality: FilterQuality.none,
+                    gaplessPlayback: true,
                   ),
                 ),
-            ],
-          ),
         ),
+      ),
     );
   }
 }
@@ -268,9 +293,11 @@ class _CharacterCard {
     required this.front,
     required this.back,
     required this.rect,
+    required this.elegirFrac,
   });
 
   final String front;
   final String back;
   final Rect rect;
+  final Rect elegirFrac;
 }

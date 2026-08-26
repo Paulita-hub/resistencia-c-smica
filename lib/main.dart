@@ -149,7 +149,6 @@ class MyApp extends StatelessWidget {
             pageBuilder: (context, state) => buildMyTransition<void>(
               key: ValueKey('play'),
               child: const PlayMenuScreen(key: Key('play menu')),
-              color: context.watch<Palette>().backgroundLevelSelection,
             ),
             routes: [
               GoRoute(
@@ -159,7 +158,6 @@ class MyApp extends StatelessWidget {
                   child: const CharacterSelectScreen(
                     key: Key('level selection'),
                   ),
-                  color: context.watch<Palette>().backgroundLevelSelection,
                 ),
               ),
               GoRoute(
@@ -179,7 +177,6 @@ class MyApp extends StatelessWidget {
                       level,
                       key: const Key('play session'),
                     ),
-                    color: context.watch<Palette>().backgroundPlaySession,
                   );
                 },
               ),
@@ -205,7 +202,6 @@ class MyApp extends StatelessWidget {
                       score: score,
                       key: const Key('win game'),
                     ),
-                    color: context.watch<Palette>().backgroundPlaySession,
                   );
                 },
               ),
@@ -213,8 +209,10 @@ class MyApp extends StatelessWidget {
           ),
           GoRoute(
             path: 'settings',
-            builder: (context, state) =>
-                const SettingsScreen(key: Key('settings')),
+            pageBuilder: (context, state) => buildMyTransition<void>(
+              key: const ValueKey('settings'),
+              child: const SettingsScreen(key: Key('settings')),
+            ),
           ),
         ],
       ),
@@ -307,7 +305,13 @@ class MyApp extends StatelessWidget {
                 );
                 Widget content = MediaQuery(
                   data: clamped,
-                  child: child ?? const SizedBox.shrink(),
+                  child: Listener(
+                    behavior: HitTestBehavior.translucent,
+                    onPointerDown: (_) {
+                      context.read<AudioController>().handleUserGesture();
+                    },
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 );
                 if (clamped.size.height > clamped.size.width + 24) {
                   content = Stack(

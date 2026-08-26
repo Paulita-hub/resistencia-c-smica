@@ -17,6 +17,8 @@ import 'sounds.dart';
 class AudioController {
   static final _log = Logger('AudioController');
 
+  static AudioController? instance;
+
   final AudioPlayer _musicPlayer;
 
   /// This is a list of [AudioPlayer] instances which are rotated to play
@@ -33,6 +35,9 @@ class AudioController {
 
   ValueNotifier<AppLifecycleState>? _lifecycleNotifier;
 
+  /// Evita que `unmute()` arranque la música antes del clic de un botón.
+  bool _ignoreMusicOnUnmute = false;
+
   /// Creates an instance that plays music and sound.
   ///
   /// Use [polyphony] to configure the number of sound effects (SFX) that can
@@ -42,14 +47,16 @@ class AudioController {
   ///
   /// Background music does not count into the [polyphony] limit. Music will
   /// never be overridden by sound effects because that would be silly.
-  AudioController({int polyphony = 2})
+  AudioController({int polyphony = 8})
     : assert(polyphony >= 1),
       _musicPlayer = AudioPlayer(playerId: 'musicPlayer'),
       _sfxPlayers = Iterable.generate(
         polyphony,
         (i) => AudioPlayer(playerId: 'sfxPlayer#$i'),
       ).toList(growable: false),
-      _playlist = Queue.of(List<Song>.of(songs)..shuffle()) {
+      _playlist = Queue.of(List<Song>.of(songs)) {
+    instance = this;
+    _musicPlayer.setReleaseMode(ReleaseMode.loop);
     _musicPlayer.onPlayerComplete.listen(_changeSong);
   }
 
@@ -81,6 +88,7 @@ class AudioController {
       oldSettings.muted.removeListener(_mutedHandler);
       oldSettings.musicOn.removeListener(_musicOnHandler);
       oldSettings.soundsOn.removeListener(_soundsOnHandler);
+      oldSettings.musicVolume.removeListener(_musicVolumeHandler);
     }
 
     _settings = settingsController;
@@ -89,13 +97,31 @@ class AudioController {
     settingsController.muted.addListener(_mutedHandler);
     settingsController.musicOn.addListener(_musicOnHandler);
     settingsController.soundsOn.addListener(_soundsOnHandler);
+    settingsController.musicVolume.addListener(_musicVolumeHandler);
+    _applyMusicVolume();
 
     if (!settingsController.muted.value && settingsController.musicOn.value) {
       _startMusic();
     }
   }
 
+  /// Call from a tap so the browser allows audio and the loop can start.
+  void handleUserGesture() {
+    _settings?.unmute();
+    if (_settings == null) return;
+    if (_settings!.muted.value) return;
+    if (_settings!.musicOn.value) {
+      _ensureMusicPlaying();
+    }
+  }
+
+  /// Clic de menú / botón. Usa el singleton para overlays de Flame.
+  static void playClick() {
+    instance?.playSfx(SfxType.buttonTap);
+  }
+
   void dispose() {
+    if (instance == this) instance = null;
     _lifecycleNotifier?.removeListener(_handleAppLifecycle);
     _stopAllSound();
     _musicPlayer.dispose();
@@ -107,30 +133,36 @@ class AudioController {
   /// Preloads all sound effects.
   Future<void> initialize() async {
     _log.info('Preloading sound effects');
-    // This assumes there is only a limited number of sound effects in the game.
-    // If there are hundreds of long sound effect files, it's better
-    // to be more selective when preloading.
-    await AudioCache.instance.loadAll(
-      SfxType.values
-          .expand(soundTypeToFilename)
-          .map((path) => 'sfx/$path')
-          .toList(),
-    );
+    try {
+      await AudioCache.instance.loadAll(
+        SfxType.values
+            .expand(soundTypeToFilename)
+            .toSet()
+            .map((path) => 'sfx/$path')
+            .toList(),
+      );
+    } catch (e) {
+      _log.warning('Could not preload all SFX: $e');
+    }
   }
 
-  /// Plays a single sound effect, defined by [type].
-  ///
-  /// The controller will ignore this call when the attached settings'
-  /// [SettingsController.muted] is `true` or if its
-  /// [SettingsController.soundsOn] is `false`.
   void playSfx(SfxType type) {
-    final muted = _settings?.muted.value ?? true;
+    var muted = _settings?.muted.value ?? false;
+    // El clic de menú desmutea, pero la música arranca después del SFX
+    // para no comerse el gesto del navegador.
+    if (muted && type == SfxType.buttonTap) {
+      _ignoreMusicOnUnmute = true;
+      _settings?.unmute();
+      _ignoreMusicOnUnmute = false;
+      muted = false;
+    }
     if (muted) {
       _log.info(() => 'Ignoring playing sound ($type) because audio is muted.');
       return;
     }
-    final soundsOn = _settings?.soundsOn.value ?? false;
-    if (!soundsOn) {
+    final soundsOn = _settings?.soundsOn.value ?? true;
+    // Clicks de menú siempre suenan; el resto respeta el slider de sonido.
+    if (type != SfxType.buttonTap && !soundsOn) {
       _log.info(
         () => 'Ignoring playing sound ($type) because sounds are turned off.',
       );
@@ -140,21 +172,18 @@ class AudioController {
     _log.info(() => 'Playing sound: $type');
     final options = soundTypeToFilename(type);
     final filename = options[_random.nextInt(options.length)];
-    _log.info(() => '- Chosen filename: $filename');
+    final volume = soundTypeToVolume(type) *
+        (type == SfxType.buttonTap
+            ? (_settings?.soundsVolume.value ?? 1).clamp(0.35, 1.0)
+            : (_settings?.soundsVolume.value ?? 1));
 
     final currentPlayer = _sfxPlayers[_currentSfxPlayer];
-    currentPlayer.play(
-      AssetSource('sfx/$filename'),
-      volume: soundTypeToVolume(type),
-    );
+    currentPlayer.play(AssetSource('sfx/$filename'), volume: volume);
     _currentSfxPlayer = (_currentSfxPlayer + 1) % _sfxPlayers.length;
   }
 
   void _changeSong(void _) {
-    _log.info('Last song finished playing.');
-    // Put the song that just finished playing to the end of the playlist.
-    _playlist.addLast(_playlist.removeFirst());
-    // Play the next song.
+    _log.info('Music finished; looping.');
     _playFirstSongInPlaylist();
   }
 
@@ -188,19 +217,28 @@ class AudioController {
 
   void _mutedHandler() {
     if (_settings!.muted.value) {
-      // All sound just got muted.
       _stopAllSound();
-    } else {
-      // All sound just got un-muted.
-      if (_settings!.musicOn.value) {
-        _resumeMusic();
-      }
+    } else if (!_ignoreMusicOnUnmute && _settings!.musicOn.value) {
+      _resumeMusic();
     }
   }
 
   Future<void> _playFirstSongInPlaylist() async {
     _log.info(() => 'Playing ${_playlist.first} now.');
+    await _musicPlayer.setReleaseMode(ReleaseMode.loop);
     await _musicPlayer.play(AssetSource('music/${_playlist.first.filename}'));
+    await _applyMusicVolume();
+  }
+
+  Future<void> _applyMusicVolume() async {
+    final muted = _settings?.muted.value ?? true;
+    final on = _settings?.musicOn.value ?? false;
+    final volume = _settings?.musicVolume.value ?? 1;
+    await _musicPlayer.setVolume(muted || !on ? 0 : volume);
+  }
+
+  void _musicVolumeHandler() {
+    _applyMusicVolume();
   }
 
   Future<void> _resumeMusic() async {
@@ -210,6 +248,7 @@ class AudioController {
         _log.info('Calling _musicPlayer.resume()');
         try {
           await _musicPlayer.resume();
+          await _applyMusicVolume();
         } catch (e) {
           // Sometimes, resuming fails with an "Unexpected" error.
           _log.severe(e);
@@ -249,7 +288,15 @@ class AudioController {
 
   void _startMusic() {
     _log.info('starting music');
-    _playFirstSongInPlaylist();
+    _ensureMusicPlaying();
+  }
+
+  Future<void> _ensureMusicPlaying() async {
+    if (_musicPlayer.state == PlayerState.playing) {
+      await _applyMusicVolume();
+      return;
+    }
+    await _playFirstSongInPlaylist();
   }
 
   void _stopAllSound() {

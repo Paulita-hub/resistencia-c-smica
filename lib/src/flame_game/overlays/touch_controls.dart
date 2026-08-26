@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../style/pressable.dart';
 import '../resistencia_game.dart';
 
 class TouchControls extends StatelessWidget {
@@ -36,11 +37,7 @@ class TouchControls extends StatelessWidget {
             ),
             if (game.canAttack) ...[
               const SizedBox(width: 10),
-              _HoldButton(
-                label: 'Atacar',
-                accent: true,
-                onTap: game.tapAttack,
-              ),
+              _HoldButton(label: 'Atacar', accent: true, onTap: game.tapAttack),
             ],
           ],
         ),
@@ -66,30 +63,33 @@ class _HoldButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: (_) {
-        onTap?.call();
-        onHeld?.call(true);
-      },
-      onPointerUp: (_) => onHeld?.call(false),
-      onPointerCancel: (_) => onHeld?.call(false),
-      child: Container(
-        width: width,
-        height: 72,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: accent ? const Color(0x99D0089A) : const Color(0x661D3557),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: accent ? const Color(0xFFFF5AD6) : Colors.white24,
+    return Pressable(
+      overlay: true,
+      child: Listener(
+        onPointerDown: (_) {
+          onTap?.call();
+          onHeld?.call(true);
+        },
+        onPointerUp: (_) => onHeld?.call(false),
+        onPointerCancel: (_) => onHeld?.call(false),
+        child: Container(
+          width: width,
+          height: 72,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: accent ? const Color(0x99D0089A) : const Color(0x661D3557),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: accent ? const Color(0xFFFF5AD6) : Colors.white24,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),

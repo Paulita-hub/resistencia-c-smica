@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'pressable.dart';
+
 class JugarButton extends StatelessWidget {
-  const JugarButton({
-    required this.onPressed,
-    this.height = 55,
-    super.key,
-  });
+  const JugarButton({required this.onPressed, this.height = 55, super.key});
 
   static const asset = 'assets/images/ui/button_jugar.png';
   static const srcSize = Size(381, 142);
@@ -16,8 +14,8 @@ class JugarButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = height * srcSize.width / srcSize.height;
-    return GestureDetector(
-      onTap: onPressed,
+    return Pressable(
+      onPressed: onPressed,
       child: Semantics(
         button: true,
         label: 'Jugar',

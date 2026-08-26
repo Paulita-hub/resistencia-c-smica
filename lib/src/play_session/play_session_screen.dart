@@ -60,19 +60,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen> {
         child: GameWidget<ResistenciaGame>(
           game: _game,
           overlayBuilderMap: {
-            ResistenciaGame.hudOverlay: (context, game) => GameHud(
-              game: game,
-              onSettings: () async {
-                game.pauseEngine();
-                await GoRouter.of(context).push('/settings');
-                if (!context.mounted) return;
-                if (game.overlays.isActive(ResistenciaGame.pauseOverlay)) {
-                  return;
-                }
-                if (!game.gameOver) game.resumeEngine();
-              },
-              onPause: game.pauseGame,
-            ),
+            ResistenciaGame.hudOverlay: (context, game) =>
+                GameHud(game: game, onPause: game.pauseGame),
             ResistenciaGame.gameOverOverlay: (context, game) {
               return GameOverOverlay(
                 game: game,
@@ -96,7 +85,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen> {
                 onExit: () => GoRouter.of(context).go('/play'),
                 onNext: () {
                   final next = game.level.number + 1;
-                  final exists = gameLevels.any((level) => level.number == next);
+                  final exists = gameLevels.any(
+                    (level) => level.number == next,
+                  );
                   if (exists) {
                     GoRouter.of(context).go('/play/session/$next');
                   } else {
