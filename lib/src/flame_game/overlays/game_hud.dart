@@ -18,6 +18,16 @@ class GameHud extends StatefulWidget {
 class _GameHudState extends State<GameHud> {
   bool _audioOpen = false;
 
+  void _setAudioOpen(bool open) {
+    if (_audioOpen == open) return;
+    setState(() => _audioOpen = open);
+    if (open) {
+      widget.game.pauseForSettings();
+    } else {
+      widget.game.resumeFromSettings();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final game = widget.game;
@@ -66,8 +76,7 @@ class _GameHudState extends State<GameHud> {
                         _HudImageButton(
                           asset: 'assets/images/hud/hud_settings.png',
                           height: plaqueH,
-                          onPressed: () =>
-                              setState(() => _audioOpen = !_audioOpen),
+                          onPressed: () => _setAudioOpen(!_audioOpen),
                         ),
                         const SizedBox(width: 8),
                         _LevelPlaque(level: game.level.number, height: plaqueH),
@@ -76,7 +85,10 @@ class _GameHudState extends State<GameHud> {
                           asset: 'assets/images/hud/hud_pause.png',
                           height: plaqueH,
                           onPressed: () {
-                            setState(() => _audioOpen = false);
+                            // Keep the engine paused when handing off to PauseOverlay.
+                            if (_audioOpen) {
+                              setState(() => _audioOpen = false);
+                            }
                             widget.onPause();
                           },
                         ),

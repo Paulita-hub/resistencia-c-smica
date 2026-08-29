@@ -518,6 +518,24 @@ class ResistenciaGame extends FlameGame
     if (!gameOver) resumeEngine();
   }
 
+  /// Freezes gameplay while the in-level audio settings panel is open.
+  void pauseForSettings() {
+    if (gameOver || _won) return;
+    pauseEngine();
+  }
+
+  /// Resumes after closing audio settings, unless another overlay still holds pause.
+  void resumeFromSettings() {
+    if (gameOver ||
+        _won ||
+        overlays.isActive(pauseOverlay) ||
+        overlays.isActive(gameOverOverlay) ||
+        overlays.isActive(winOverlay)) {
+      return;
+    }
+    resumeEngine();
+  }
+
   void beginRun() {
     if (started || gameOver) return;
     started = true;
